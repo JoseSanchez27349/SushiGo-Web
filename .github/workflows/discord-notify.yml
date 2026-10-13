@@ -1,0 +1,13 @@
+name: Discord Notification
+on: [push]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enviar notificación a Discord
+        run: |
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d '{"content": "🚀 **Nuevo cambio en SushiGo**\n> **Autor:** ${{ github.actor }}\n> **Mensaje:** ${{ github.event.head_commit.message }}\n${{ github.event.head_commit.url }}"}' \
+               ${{ secrets.DISCORD_WEBHOOK }}
