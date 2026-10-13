@@ -9,5 +9,5 @@ jobs:
         run: |
           curl -H "Content-Type: application/json" \
                -X POST \
-               -d '{"content": "🚀 **Nuevo cambio en SushiGo**\n> **Autor:** ${{ github.actor }}\n> **Mensaje:** ${{ github.event.head_commit.message }}\n${{ github.event.head_commit.url }}"}' \
+               -d '{"content": "🚀 **Nuevo cambio en SushiGo-Web**\n> **Autor:** ${{ github.actor }}\n> **Mensaje:** ${{ github.event.head_commit.message }}\n${{ github.event.head_commit.url }}"}' \
                ${{ secrets.DISCORD_WEBHOOK }}
