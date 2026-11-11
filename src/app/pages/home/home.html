@@ -1,0 +1,50 @@
+<!-- Hero Section -->
+<section class="relative bg-gray-900 text-white">
+  <!-- Imagen de fondo simulada con un gradiente y una URL de imagen de comida -->
+  <div class="absolute inset-0 bg-cover bg-center opacity-40" style="background-image: url('https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=2070&auto=format&fit=crop');"></div>
+  
+  <div class="relative container mx-auto px-6 py-32 text-center">
+    <h1 class="text-5xl md:text-7xl font-extrabold mb-4">
+      El Arte del <span class="text-red-500">Sushi</span> <br> 
+      con el Alma de <span class="text-green-400">México</span>
+    </h1>
+    <p class="text-xl md:text-2xl mb-8 text-gray-200 max-w-2xl mx-auto">
+      Rollos innovadores, tacos de pescado y los mejores cortes de atún. Una experiencia que no olvidarás.
+    </p>
+    <a routerLink="/menu" class="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full text-lg transition duration-300 shadow-lg">
+      Ver Menú
+    </a>
+  </div>
+</section>
+
+<!-- Sección de Bienvenida / Especialidades -->
+<section class="py-20 container mx-auto px-6">
+  <h2 class="text-4xl font-bold text-center mb-12 text-gray-800">Nuestras Especialidades</h2>
+  
+  <div class="grid md:grid-cols-3 gap-8">
+    <!-- Tarjeta 1 -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition">
+      <div class="h-48 bg-red-200 flex items-center justify-center text-red-600 text-6xl">🍣</div>
+      <div class="p-6">
+        <h3 class="font-bold text-xl mb-2">Sushi Tradicional</h3>
+        <p class="text-gray-600">Nigiris, sashimis y rolls clásicos preparados con pescado fresco del día.</p>
+      </div>
+    </div>
+    <!-- Tarjeta 2 -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition">
+      <div class="h-48 bg-green-200 flex items-center justify-center text-green-600 text-6xl">🌮</div>
+      <div class="p-6">
+        <h3 class="font-bold text-xl mb-2">Fusión Mexicana</h3>
+        <p class="text-gray-600">Tacos de atún, tostadas de salmón y salsas picantes que despiertan el paladar.</p>
+      </div>
+    </div>
+    <!-- Tarjeta 3 -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition">
+      <div class="h-48 bg-orange-200 flex items-center justify-center text-orange-600 text-6xl">🍱</div>
+      <div class="p-6">
+        <h3 class="font-bold text-xl mb-2">Combos SushiGo</h3>
+        <p class="text-gray-600">Nuestras cajas sorpresa con lo mejor de ambos mundos a un precio especial.</p>
+      </div>
+    </div>
+  </div>
+</section>
