@@ -1,40 +1,806 @@
-<div class="min-h-screen bg-[#0d0d0d] text-white flex flex-col font-sans select-none">
-  <!-- Navbar Terminal POS -->
-  <header class="bg-[#181818] border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
+<div class="h-screen overflow-hidden bg-[#0d0d0d] text-white flex flex-col font-sans select-none">
+
+  <!-- Navbar Superior POS -->
+  <header class="bg-[#181818] border-b border-zinc-800 px-4 py-2.5 flex items-center justify-between gap-3 shrink-0 z-30">
+    
+    <!-- Marca & Usuario -->
     <div class="flex items-center gap-3">
-      <div class="w-9 h-9 bg-[#ab2424] rounded-xl flex items-center justify-center font-black text-lg shadow-md shadow-red-900/30">
-        S
+      <div class="w-9 h-9 bg-[#ab2424] text-white rounded-xl flex items-center justify-center font-black text-lg shadow">
+        🍣
       </div>
-      <div>
-        <h1 class="font-bold text-base tracking-wide">SushiGo — Terminal POS</h1>
-        <p class="text-xs text-zinc-400">Rol: {{ user()?.role }} | Código: {{ user()?.codigoEmpleado }}</p>
+      <div class="hidden sm:block">
+        <h1 class="font-bold text-sm tracking-wide leading-tight">SushiGo POS</h1>
+        <p class="text-[11px] text-zinc-400">
+          {{ user()?.nombre }} · <span class="text-red-400 font-semibold">{{ user()?.role }}</span>
+        </p>
       </div>
     </div>
 
-    <div class="flex items-center gap-4">
-      <span class="text-sm font-medium text-zinc-300">👋 Hola, {{ user()?.nombre }}</span>
+    <!-- Buscador rápido de platillos -->
+    <div class="flex-1 max-w-md">
+      <div class="relative">
+        <input 
+          type="text"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+          placeholder="Buscar rollo, bebida o entrada..."
+          class="w-full h-9 bg-[#111111] border border-zinc-800 rounded-xl pl-3.5 pr-8 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-red-500" />
+        @if (searchQuery()) {
+          <button 
+            type="button"
+            (click)="searchQuery.set('')"
+            class="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white text-sm font-bold">
+            &times;
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Acciones de sesión y Órdenes Activas / Caja -->
+    <div class="flex items-center gap-2">
       <button 
-        (click)="onLogout()" 
-        class="bg-[#222222] hover:bg-red-950/40 text-zinc-300 hover:text-red-400 border border-zinc-800 hover:border-red-800/50 text-xs px-3 py-2 rounded-xl transition-all active:scale-95">
-        Cerrar Sesión
+        type="button"
+        (click)="openOrdersModal('todas')"
+        class="h-9 px-3 text-xs font-semibold rounded-xl border flex items-center gap-1.5 transition-all active:scale-95"
+        [ngClass]="ordenesListas().length > 0 
+          ? 'bg-emerald-950/70 hover:bg-emerald-900/70 text-emerald-200 border-emerald-500/60 shadow-lg shadow-emerald-950/40' 
+          : 'bg-[#222222] hover:bg-zinc-700 text-zinc-200 border-zinc-700'">
+        <span>💳</span>
+        <span class="hidden sm:inline">Cuentas / Cobrar</span>
+        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#ab2424] text-white">
+          {{ ordenesActivas().length }}
+        </span>
+        @if (ordenesListas().length > 0) {
+          <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-black animate-pulse">
+            🔔 {{ ordenesListas().length }} listo
+          </span>
+        }
+      </button>
+
+      <button 
+        type="button"
+        (click)="refreshAll()"
+        title="Actualizar menú, mesas y stock"
+        class="h-9 px-3 bg-[#222222] hover:bg-zinc-700 active:scale-95 text-zinc-300 text-xs font-semibold rounded-xl border border-zinc-700 transition-all">
+        🔄
+      </button>
+
+      @if (isAdmin()) {
+        <a 
+          routerLink="/admin"
+          class="h-9 px-3 bg-[#222222] hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-xl border border-zinc-700 flex items-center gap-1.5 transition-all">
+          <span>⚙️</span>
+          <span class="hidden md:inline">Admin</span>
+        </a>
+      }
+
+      <button 
+        type="button"
+        (click)="onLogout()"
+        class="h-9 px-3 bg-[#222222] hover:bg-red-950/50 text-zinc-300 hover:text-red-400 border border-zinc-800 hover:border-red-800/50 text-xs font-semibold rounded-xl transition-all active:scale-95">
+        Salir
       </button>
     </div>
   </header>
 
-  <!-- Contenido Principal -->
-  <main class="flex-1 p-6 flex flex-col items-center justify-center">
-    <div class="bg-[#181818] border border-zinc-800 rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl">
-      <div class="w-16 h-16 bg-red-950/40 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">
-        🍣
-      </div>
-      <h2 class="text-2xl font-bold mb-2">Panel de Mesas & Pedidos</h2>
-      <p class="text-sm text-zinc-400 mb-6">Sesión iniciada correctamente como personal operativo del POS.</p>
+  <!-- Barra en Vivo de Estados en Cocina -->
+  @if (ordenesActivas().length > 0) {
+    <div class="bg-[#131313] border-b border-zinc-800 px-4 py-2 flex items-center justify-between gap-2 shrink-0 overflow-x-auto">
+      <div class="flex items-center gap-2 text-xs whitespace-nowrap">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 mr-1">
+          Cocina:
+        </span>
 
-      <div class="bg-[#111111] p-4 rounded-2xl border border-zinc-800/80 text-left text-xs font-mono text-zinc-400 space-y-1.5">
-        <p><span class="text-zinc-600 font-sans font-semibold">ID Usuario:</span> {{ user()?.id }}</p>
-        <p><span class="text-zinc-600 font-sans font-semibold">Nombre:</span> {{ user()?.nombre }}</p>
-        <p><span class="text-zinc-600 font-sans font-semibold">Rol Activo:</span> {{ user()?.role }}</p>
+        <!-- Sin Iniciar -->
+        <button 
+          type="button"
+          (click)="openOrdersModal('sin_iniciar')"
+          class="px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5"
+          [ngClass]="ordenesSinIniciar().length > 0 
+            ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border-zinc-700' 
+            : 'bg-[#181818] text-zinc-600 border-zinc-800/80'">
+          <span>⏳ Sin iniciar:</span>
+          <strong class="font-mono">{{ ordenesSinIniciar().length }}</strong>
+        </button>
+
+        <!-- En Preparación -->
+        <button 
+          type="button"
+          (click)="openOrdersModal('en_preparacion')"
+          class="px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5"
+          [ngClass]="ordenesEnPreparacion().length > 0 
+            ? 'bg-amber-950/60 hover:bg-amber-900/60 text-amber-200 border-amber-500/40' 
+            : 'bg-[#181818] text-zinc-600 border-zinc-800/80'">
+          <span>🔥 En preparación:</span>
+          <strong class="font-mono">{{ ordenesEnPreparacion().length }}</strong>
+        </button>
+
+        <!-- Listos para Cobrar -->
+        <button 
+          type="button"
+          (click)="openOrdersModal('listo')"
+          class="px-2.5 py-1 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5"
+          [ngClass]="ordenesListas().length > 0 
+            ? 'bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-200 border-emerald-500/50 shadow' 
+            : 'bg-[#181818] text-zinc-600 border-zinc-800/80'">
+          <span>✅ Listos:</span>
+          <strong class="font-mono">{{ ordenesListas().length }}</strong>
+        </button>
+
+        <!-- Etiquetas rápidas de folios listos -->
+        @if (ordenesListas().length > 0) {
+          <div class="hidden md:flex items-center gap-1.5 pl-2 border-l border-zinc-800">
+            @for (lista of ordenesListas(); track lista.id) {
+              <button 
+                type="button"
+                (click)="openCheckoutModal(lista)"
+                class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 transition-colors">
+                🔔 {{ formatFolio(lista) }} ({{ lista.mesa ? getMesaLabel(lista.mesa) : 'Llevar' }})
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <button 
+        type="button"
+        (click)="openOrdersModal('todas')"
+        class="text-[11px] font-bold text-zinc-400 hover:text-white shrink-0">
+        Ver cuentas →
+      </button>
+    </div>
+  }
+
+  <!-- Notificación flotante -->
+  @if (feedbackMessage()) {
+    <div 
+      class="fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold shadow-2xl border flex items-center gap-3"
+      [ngClass]="{
+        'bg-emerald-950/95 border-emerald-500/50 text-emerald-200': feedbackType() === 'success',
+        'bg-amber-950/95 border-amber-500/50 text-amber-200': feedbackType() === 'warning',
+        'bg-red-950/95 border-red-500/50 text-red-200': feedbackType() === 'error'
+      }">
+      <span>{{ feedbackMessage() }}</span>
+      <button type="button" (click)="feedbackMessage.set('')" class="font-bold opacity-75 hover:opacity-100">&times;</button>
+    </div>
+  }
+
+  <!-- Cuerpo Principal Split-Screen -->
+  <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+
+    <!-- ==================== PANEL IZQUIERDO: CATÁLOGO DE PRODUCTOS ==================== -->
+    <section class="flex-1 flex flex-col overflow-hidden p-3 sm:p-4">
+      
+      <!-- Barra de Categorías -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-3 mb-2 shrink-0">
+        <button 
+          type="button"
+          (click)="selectedCategoryId.set(null)"
+          class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all border"
+          [ngClass]="selectedCategoryId() === null ? 'bg-[#ab2424] text-white border-red-500 shadow' : 'bg-[#181818] text-zinc-400 border-zinc-800 hover:text-white'">
+          Todos ({{ productos().length }})
+        </button>
+
+        @for (cat of activeCategorias(); track cat.id) {
+          <button 
+            type="button"
+            (click)="selectedCategoryId.set(cat.id)"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all border"
+            [ngClass]="selectedCategoryId() === cat.id ? 'bg-[#ab2424] text-white border-red-500 shadow' : 'bg-[#181818] text-zinc-400 border-zinc-800 hover:text-white'">
+            {{ cat.nombre }}
+          </button>
+        }
+      </div>
+
+      <!-- Grid de Productos -->
+      @if (isLoading()) {
+        <div class="flex-1 flex flex-col items-center justify-center text-zinc-400 text-sm gap-2">
+          <span class="w-7 h-7 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></span>
+          <span>Cargando menú del restaurante...</span>
+        </div>
+      } @else if (filteredProductos().length === 0) {
+        <div class="flex-1 flex flex-col items-center justify-center text-zinc-500 text-sm border border-dashed border-zinc-800 rounded-2xl p-8 text-center">
+          <p class="font-semibold text-zinc-300 mb-1">No hay productos para mostrar</p>
+          <p class="text-xs">Prueba seleccionando otra categoría o limpiando el filtro de búsqueda.</p>
+        </div>
+      } @else {
+        <div class="flex-1 overflow-y-auto pr-1">
+          <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 pb-4 pt-2">
+            @for (prod of filteredProductos(); track prod.id) {
+              <div 
+                (click)="addToCart(prod)"
+                class="relative text-left bg-[#181818] border rounded-2xl p-3 flex flex-col justify-between transition-all shadow-md"
+                [ngClass]="isProductAvailable(prod) 
+                  ? 'border-zinc-800/90 hover:border-red-500/60 hover:bg-[#1f1f1f] active:scale-[0.98] cursor-pointer' 
+                  : 'border-zinc-900 opacity-50 cursor-not-allowed'">
+
+                <!-- Badge cantidad agregada en comanda -->
+                @if (cartQuantityMap()[prod.id]) {
+                  <span class="absolute -top-2 -right-2 w-7 h-7 bg-[#ab2424] text-white font-mono font-black text-xs rounded-full flex items-center justify-center shadow-lg border-2 border-[#0d0d0d] z-10">
+                    {{ cartQuantityMap()[prod.id] }}
+                  </span>
+                }
+
+                <div>
+                  <!-- Imagen o Icono -->
+                  <div class="w-full h-24 sm:h-28 rounded-xl bg-[#111111] border border-zinc-800/80 mb-2.5 overflow-hidden flex items-center justify-center relative">
+                    @if (prod.urlImagen) {
+                      <img [src]="prod.urlImagen" [alt]="prod.nombre" class="w-full h-full object-cover" />
+                    } @else {
+                      <span class="text-3xl">🍣</span>
+                    }
+
+                    <!-- Etiqueta de disponibilidad / stock -->
+                    @if (!prod.estaDisponible) {
+                      <span class="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-950/90 text-red-300 border border-red-500/40">
+                        No disponible
+                      </span>
+                    } @else if (prod.disponibleParaVenta === false) {
+                      <span class="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-950/95 text-amber-300 border border-amber-500/40">
+                        Agotado
+                      </span>
+                    } @else if (prod.porcionesDisponibles !== null && prod.porcionesDisponibles !== undefined && prod.porcionesDisponibles <= 5) {
+                      <span class="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-zinc-900/90 text-amber-300 border border-amber-500/30">
+                        Quedan {{ prod.porcionesDisponibles }}
+                      </span>
+                    }
+                  </div>
+
+                  <!-- Categoría y Nombre -->
+                  <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">
+                    {{ prod.categoria.nombre }}
+                  </span>
+                  <h3 class="font-bold text-xs sm:text-sm text-white leading-snug line-clamp-2 mt-0.5">
+                    {{ prod.nombre }}
+                  </h3>
+                  @if (prod.descripcion) {
+                    <p class="text-[11px] text-zinc-500 line-clamp-1 mt-1">
+                      {{ prod.descripcion }}
+                    </p>
+                  }
+                </div>
+
+                <!-- Precio -->
+                <div class="mt-3 pt-2 border-t border-zinc-800/70 flex items-center justify-between">
+                  <span class="font-mono font-black text-sm sm:text-base text-emerald-400">
+                    {{ prod.precio | currency:'MXN':'symbol-narrow':'1.2-2' }}
+                  </span>
+                  @if (isProductAvailable(prod)) {
+                    <span class="text-[11px] font-bold text-zinc-400">+ Agregar</span>
+                  }
+                </div>
+
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- ==================== PANEL DERECHO: COMANDA / TICKET ==================== -->
+    <aside class="w-full lg:w-96 bg-[#141414] border-t lg:border-t-0 lg:border-l border-zinc-800 flex flex-col shrink-0 h-[48vh] lg:h-full">
+      
+      <!-- Header Comanda + Tipo de Orden + Mesa -->
+      <div class="p-3 bg-[#181818] border-b border-zinc-800 space-y-2.5 shrink-0">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="font-bold text-sm text-white">Comanda Actual</h2>
+            <p class="text-[11px] text-zinc-400">{{ totalArticulos() }} artículos</p>
+          </div>
+
+          @if (cart().length > 0) {
+            <button 
+              type="button"
+              (click)="clearCart()"
+              class="text-xs text-red-400 hover:text-red-300 font-semibold px-2.5 py-1 rounded-lg hover:bg-red-950/40 transition-colors">
+              Limpiar
+            </button>
+          }
+        </div>
+
+        <!-- Selector Tipo de Orden -->
+        <div class="grid grid-cols-2 gap-1.5 bg-[#111111] p-1 rounded-xl border border-zinc-800">
+          <button 
+            type="button"
+            (click)="setTipoOrden('comedor')"
+            class="py-1.5 rounded-lg text-xs font-bold transition-all"
+            [ngClass]="tipoOrden() === 'comedor' ? 'bg-[#ab2424] text-white shadow' : 'text-zinc-400 hover:text-white'">
+            🍽️ Comedor
+          </button>
+          <button 
+            type="button"
+            (click)="setTipoOrden('llevar')"
+            class="py-1.5 rounded-lg text-xs font-bold transition-all"
+            [ngClass]="tipoOrden() === 'llevar' ? 'bg-[#ab2424] text-white shadow' : 'text-zinc-400 hover:text-white'">
+            🛍️ Para Llevar
+          </button>
+        </div>
+
+        <!-- Selector de Mesa (solo si es Comedor) -->
+        @if (tipoOrden() === 'comedor') {
+          <div>
+            @if (mesas().length === 0) {
+              <div class="text-[11px] text-amber-400 bg-amber-950/40 border border-amber-500/30 rounded-lg px-2.5 py-1.5">
+                No hay mesas registradas en el sistema.
+              </div>
+            } @else {
+              <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
+                @for (mesa of mesas(); track mesa.id) {
+                  <button 
+                    type="button"
+                    (click)="selectMesa(mesa)"
+                    [disabled]="mesa.estado === 'mantenimiento'"
+                    class="px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all flex items-center gap-1.5"
+                    [ngClass]="{
+                      'bg-zinc-100 text-black border-white shadow': selectedMesaId() === mesa.id,
+                      'bg-[#111111] text-zinc-300 border-zinc-800 hover:border-zinc-600': selectedMesaId() !== mesa.id && mesa.estado !== 'mantenimiento',
+                      'bg-[#111111] text-zinc-600 border-zinc-900 opacity-45 cursor-not-allowed': mesa.estado === 'mantenimiento'
+                    }">
+                    <span 
+                      class="w-2 h-2 rounded-full"
+                      [ngClass]="{
+                        'bg-emerald-400': mesa.estado === 'disponible',
+                        'bg-amber-400': mesa.estado === 'ocupada',
+                        'bg-sky-400': mesa.estado === 'reservada',
+                        'bg-zinc-500': mesa.estado === 'mantenimiento'
+                      }">
+                    </span>
+                    <span>{{ getMesaLabel(mesa) }}</span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Lista de Items en la Comanda -->
+      <div class="flex-1 overflow-y-auto p-3 space-y-2">
+        @if (cart().length === 0) {
+          <div class="h-full flex flex-col items-center justify-center text-center text-zinc-500 px-4">
+            <span class="text-2xl mb-1">🧾</span>
+            <p class="text-xs font-semibold text-zinc-400">La comanda está vacía</p>
+            <p class="text-[11px] mt-0.5">Selecciona los platillos del menú para comenzar.</p>
+          </div>
+        } @else {
+          @for (item of cart(); track item.product.id) {
+            <div class="bg-[#181818] border border-zinc-800/90 rounded-xl p-2.5 space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <div class="font-bold text-xs text-white truncate">{{ item.product.nombre }}</div>
+                  <div class="font-mono text-[11px] text-zinc-400">
+                    {{ item.product.precio | currency:'MXN':'symbol-narrow':'1.2-2' }} c/u
+                  </div>
+                </div>
+
+                <div class="font-mono font-bold text-xs text-emerald-400 shrink-0">
+                  {{ (+item.product.precio * item.cantidad) | currency:'MXN':'symbol-narrow':'1.2-2' }}
+                </div>
+              </div>
+
+              <!-- Controles de cantidad y nota -->
+              <div class="flex items-center justify-between gap-2">
+                <input 
+                  type="text"
+                  [ngModel]="item.notas"
+                  (ngModelChange)="updateItemNotes(item.product.id, $event)"
+                  placeholder="Nota (ej. sin cebollín)..."
+                  class="flex-1 h-7 bg-[#111111] border border-zinc-800 rounded-lg px-2 text-[11px] text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-600" />
+
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <button 
+                    type="button"
+                    (click)="decrementItem(item)"
+                    class="w-7 h-7 bg-[#222222] hover:bg-zinc-700 active:scale-95 rounded-lg text-white font-bold text-sm flex items-center justify-center border border-zinc-700">
+                    −
+                  </button>
+                  <span class="w-6 text-center font-mono font-bold text-xs text-white">
+                    {{ item.cantidad }}
+                  </span>
+                  <button 
+                    type="button"
+                    (click)="incrementItem(item)"
+                    class="w-7 h-7 bg-[#222222] hover:bg-zinc-700 active:scale-95 rounded-lg text-white font-bold text-sm flex items-center justify-center border border-zinc-700">
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Footer Notas Generales, Total y Botón de Envío -->
+      <div class="p-3 bg-[#181818] border-t border-zinc-800 space-y-2 shrink-0">
+        @if (cart().length > 0) {
+          <input 
+            type="text"
+            [ngModel]="ordenNotas()"
+            (ngModelChange)="ordenNotas.set($event)"
+            placeholder="Nota general de la orden (opcional)..."
+            class="w-full h-8 bg-[#111111] border border-zinc-800 rounded-lg px-2.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-600" />
+        }
+
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-zinc-400 uppercase">Total</span>
+          <span class="font-mono font-black text-lg text-white">
+            {{ totalComanda() | currency:'MXN':'symbol-narrow':'1.2-2' }}
+          </span>
+        </div>
+
+        <button 
+          type="button"
+          [disabled]="cart().length === 0 || isSubmitting()"
+          (click)="submitOrden()"
+          class="w-full h-11 bg-[#ab2424] hover:bg-[#961e1e] active:scale-[0.99] disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+          @if (isSubmitting()) {
+            <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            <span>Enviando a Cocina...</span>
+          } @else {
+            <span>Enviar Comanda a Cocina</span>
+          }
+        </button>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- ==================== MODAL ÓRDENES ACTIVAS / CUENTAS ABIERTAS ==================== -->
+  @if (isOrdersModalOpen()) {
+    <div (click)="isOrdersModalOpen.set(false)" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div (click)="$event.stopPropagation()" class="bg-[#181818] border border-zinc-800 rounded-2xl max-w-2xl w-full p-5 shadow-2xl my-auto max-h-[85vh] flex flex-col">
+        
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-3 shrink-0">
+          <div>
+            <h2 class="text-base font-bold text-white">Cuentas Abiertas ({{ ordenesActivas().length }})</h2>
+            <p class="text-[11px] text-zinc-400">Monitorea el avance en cocina y cobra cuando el pedido esté listo</p>
+          </div>
+          <button type="button" (click)="isOrdersModalOpen.set(false)" class="text-zinc-400 hover:text-white text-xl font-bold px-2">&times;</button>
+        </div>
+
+        <!-- Filtros por Estado de Cocina -->
+        <div class="flex flex-wrap items-center gap-1.5 pb-3 mb-3 border-b border-zinc-800/80 shrink-0">
+          <button 
+            type="button"
+            (click)="ordersFilter.set('todas')"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-all"
+            [ngClass]="ordersFilter() === 'todas' 
+              ? 'bg-white text-black border-white' 
+              : 'bg-[#111111] text-zinc-400 border-zinc-800 hover:text-white'">
+            Todas ({{ ordenesActivas().length }})
+          </button>
+
+          <button 
+            type="button"
+            (click)="ordersFilter.set('sin_iniciar')"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-all"
+            [ngClass]="ordersFilter() === 'sin_iniciar' 
+              ? 'bg-zinc-200 text-black border-white' 
+              : 'bg-[#111111] text-zinc-300 border-zinc-800 hover:text-white'">
+            ⏳ Sin iniciar ({{ ordenesSinIniciar().length }})
+          </button>
+
+          <button 
+            type="button"
+            (click)="ordersFilter.set('en_preparacion')"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-all"
+            [ngClass]="ordersFilter() === 'en_preparacion' 
+              ? 'bg-amber-500 text-black border-amber-400' 
+              : 'bg-[#111111] text-amber-400 border-zinc-800 hover:text-amber-300'">
+            🔥 En preparación ({{ ordenesEnPreparacion().length }})
+          </button>
+
+          <button 
+            type="button"
+            (click)="ordersFilter.set('listo')"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-all"
+            [ngClass]="ordersFilter() === 'listo' 
+              ? 'bg-emerald-500 text-black border-emerald-400' 
+              : 'bg-[#111111] text-emerald-400 border-zinc-800 hover:text-emerald-300'">
+            ✅ Listos ({{ ordenesListas().length }})
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto space-y-3 pr-1">
+          @if (filteredOrdenesActivas().length === 0) {
+            <div class="py-12 text-center text-zinc-500 text-xs">
+              No hay cuentas en esta categoría en este momento.
+            </div>
+          } @else {
+            @for (ord of filteredOrdenesActivas(); track ord.id) {
+              <div 
+                class="bg-[#111111] border rounded-xl p-3.5 space-y-2.5 transition-all"
+                [ngClass]="{
+                  'border-emerald-500/50 shadow-lg shadow-emerald-950/20': getEstadoCocinaNormalizado(ord) === 'listo',
+                  'border-amber-500/40': getEstadoCocinaNormalizado(ord) === 'en_preparacion',
+                  'border-zinc-800': getEstadoCocinaNormalizado(ord) === 'sin_iniciar'
+                }">
+                
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-mono font-bold text-xs text-red-400">{{ formatFolio(ord) }}</span>
+                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-zinc-800 text-zinc-200">
+                      {{ ord.mesa ? getMesaLabel(ord.mesa) : ord.tipoOrden }}
+                    </span>
+                    <span 
+                      class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border"
+                      [ngClass]="{
+                        'bg-emerald-950/80 text-emerald-300 border-emerald-500/40': getEstadoCocinaNormalizado(ord) === 'listo',
+                        'bg-amber-950/80 text-amber-300 border-amber-500/40': getEstadoCocinaNormalizado(ord) === 'en_preparacion',
+                        'bg-zinc-900 text-zinc-300 border-zinc-700': getEstadoCocinaNormalizado(ord) === 'sin_iniciar'
+                      }">
+                      {{ getEstadoOrdenLabel(ord) }}
+                    </span>
+                  </div>
+                  <span class="font-mono font-bold text-sm text-emerald-400 shrink-0">
+                    {{ ord.total | currency:'MXN':'symbol-narrow':'1.2-2' }}
+                  </span>
+                </div>
+
+                <div class="text-xs text-zinc-300 space-y-1 border-t border-zinc-800/80 pt-2">
+                  @for (det of ord.detalles; track $index) {
+                    <div class="flex justify-between items-center">
+                      <span><strong class="text-white">{{ det.cantidad }}x</strong> {{ det.producto.nombre }}</span>
+                      <span class="font-mono text-zinc-400">{{ det.subtotal | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
+                    </div>
+                  }
+                </div>
+
+                @if (ord.notas) {
+                  <div class="text-[11px] text-amber-300/90 bg-amber-950/30 border border-amber-500/20 rounded-lg px-2.5 py-1.5">
+                    📝 {{ ord.notas }}
+                  </div>
+                }
+
+                <!-- Acciones de Precuenta y Cobro -->
+                <div class="pt-2 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
+                  @if (getEstadoCocinaNormalizado(ord) === 'sin_iniciar') {
+                    <span class="text-[11px] text-zinc-400 font-medium">
+                      🔒 Sin iniciar en cocina · En cola de espera
+                    </span>
+                  } @else if (getEstadoCocinaNormalizado(ord) === 'en_preparacion') {
+                    <span class="text-[11px] text-amber-400/90 font-medium">
+                      🔒 En preparación · Espera liberación para cobrar
+                    </span>
+                  } @else {
+                    <span class="text-[11px] text-emerald-400 font-semibold">
+                      🍽️ Pedido liberado y listo para entrega/cobro
+                    </span>
+                  }
+
+                  <div class="flex items-center gap-2 ml-auto">
+                    <button 
+                      type="button"
+                      (click)="reimprimirTicket(ord.id, 'precuenta')"
+                      class="px-3 py-1.5 bg-[#181818] hover:bg-zinc-800 text-zinc-300 text-xs font-semibold rounded-lg border border-zinc-700 transition-all">
+                      🧾 Precuenta
+                    </button>
+
+                    <button 
+                      type="button"
+                      [disabled]="!isOrdenListaParaCobrar(ord)"
+                      (click)="openCheckoutModal(ord)"
+                      [title]="isOrdenListaParaCobrar(ord) ? 'Cobrar cuenta' : 'No se puede cobrar hasta que cocina libere el pedido'"
+                      class="px-4 py-1.5 text-xs font-bold rounded-lg transition-all"
+                      [ngClass]="isOrdenListaParaCobrar(ord) 
+                        ? 'bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white shadow cursor-pointer' 
+                        : 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed opacity-60'">
+                      @if (getEstadoCocinaNormalizado(ord) === 'listo') {
+                        💳 Cobrar Cuenta
+                      } @else if (getEstadoCocinaNormalizado(ord) === 'en_preparacion') {
+                        🔒 Preparando...
+                      } @else {
+                        🔒 Sin Iniciar
+                      }
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          }
+        </div>
+
       </div>
     </div>
-  </main>
+  }
+
+  <!-- ==================== MODAL COBRO / CAJA POS ==================== -->
+  @if (checkoutOrder(); as ord) {
+    <div (click)="closeCheckoutModal()" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div (click)="$event.stopPropagation()" class="bg-[#181818] border border-zinc-800 rounded-2xl max-w-lg w-full p-5 shadow-2xl my-auto max-h-[90vh] flex flex-col">
+        
+        <!-- Header Modal Cobro -->
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4 shrink-0">
+          <div>
+            <h2 class="text-base font-bold text-white">
+              {{ paymentReceipt() ? 'Comprobante de Pago' : 'Cobrar Orden' }}
+            </h2>
+            <p class="text-[11px] text-zinc-400">
+              Folio {{ formatFolio(ord) }} · {{ ord.mesa ? getMesaLabel(ord.mesa) : 'Para Llevar' }}
+            </p>
+          </div>
+          <button type="button" (click)="closeCheckoutModal()" class="text-zinc-400 hover:text-white text-xl font-bold px-2">&times;</button>
+        </div>
+
+        <!-- VISTA POST-PAGO (COMPROBANTE Y CAMBIO) -->
+        @if (paymentReceipt(); as receipt) {
+          <div class="space-y-4 overflow-y-auto pr-1">
+            <div class="bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-4 text-center space-y-1">
+              <div class="text-2xl">✅</div>
+              <div class="text-sm font-bold text-emerald-300">{{ receipt.message }}</div>
+              <div class="text-xs text-zinc-400">Folio #{{ receipt.folio }}</div>
+            </div>
+
+            <div class="bg-[#111111] border border-zinc-800 rounded-xl p-4 space-y-2 text-xs">
+              <div class="flex justify-between text-zinc-400">
+                <span>Total de la Orden:</span>
+                <span class="font-mono font-bold text-white">{{ receipt.totalOrden | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
+              </div>
+              <div class="flex justify-between text-zinc-400">
+                <span>Monto Abonado:</span>
+                <span class="font-mono font-bold text-emerald-400">{{ receipt.montoAbonado | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
+              </div>
+              <div class="flex justify-between text-sm font-bold border-t border-zinc-800 pt-2">
+                <span class="text-zinc-200">Cambio a Devolver:</span>
+                <span class="font-mono text-amber-400 text-base">{{ receipt.cambio | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
+              </div>
+              @if (receipt.puntosAcumulados > 0) {
+                <div class="flex justify-between text-sky-400 border-t border-zinc-800/80 pt-2">
+                  <span>Puntos de Lealtad Otorgados:</span>
+                  <span class="font-mono font-bold">+{{ receipt.puntosAcumulados }} pts</span>
+                </div>
+              }
+            </div>
+
+            <div class="flex items-center gap-2 pt-2">
+              @if (lastPaidOrderId()) {
+                <button 
+                  type="button"
+                  (click)="reimprimirTicket(lastPaidOrderId()!, 'ticket_final')"
+                  class="flex-1 h-10 bg-[#222222] hover:bg-zinc-700 text-zinc-200 text-xs font-bold rounded-xl border border-zinc-700 transition-all">
+                  🖨️ Imprimir Ticket Final
+                </button>
+              }
+              <button 
+                type="button"
+                (click)="closeCheckoutModal()"
+                class="flex-1 h-10 bg-[#ab2424] hover:bg-[#961e1e] text-white text-xs font-bold rounded-xl transition-all">
+                Listo / Cerrar
+              </button>
+            </div>
+          </div>
+        } @else {
+          <!-- FORMULARIO DE COBRO (INDIVIDUAL O MIXTO) -->
+          <div class="flex-1 overflow-y-auto space-y-4 pr-1">
+            
+            <!-- Resumen Total -->
+            <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3.5 flex items-center justify-between">
+              <div>
+                <div class="text-[11px] uppercase text-zinc-400 font-semibold">Total a Pagar</div>
+                <div class="text-[11px] text-zinc-500">{{ ord.detalles.length }} conceptos en la orden</div>
+              </div>
+              <div class="font-mono font-black text-2xl text-emerald-400">
+                {{ totalCheckout() | currency:'MXN':'symbol-narrow':'1.2-2' }}
+              </div>
+            </div>
+
+            <!-- Botones rápidos de efectivo (si solo hay 1 línea en efectivo) -->
+            @if (pagosDraft().length === 1 && pagosDraft()[0].metodoPago === 'efectivo') {
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-[11px] text-zinc-400 mr-1">Efectivo rápido:</span>
+                <button type="button" (click)="setMontoRapido(totalCheckout())" class="px-2.5 py-1 bg-[#222222] hover:bg-zinc-700 rounded-lg text-[11px] font-mono font-bold text-emerald-400 border border-zinc-700">
+                  Exacto
+                </button>
+                @for (billete of [100, 200, 500, 1000]; track billete) {
+                  @if (billete >= totalCheckout()) {
+                    <button type="button" (click)="setMontoRapido(billete)" class="px-2.5 py-1 bg-[#222222] hover:bg-zinc-700 rounded-lg text-[11px] font-mono font-bold text-zinc-200 border border-zinc-700">
+                      ${{ billete }}
+                    </button>
+                  }
+                }
+              </div>
+            }
+
+            <!-- Líneas de Método de Pago -->
+            <div class="space-y-2.5">
+              <div class="flex items-center justify-between">
+                <label class="text-[11px] font-bold uppercase text-zinc-400">Formas de Pago</label>
+                <button 
+                  type="button"
+                  (click)="addPagoLine()"
+                  class="text-xs text-red-400 hover:text-red-300 font-bold">
+                  + Dividir / Pago Mixto
+                </button>
+              </div>
+
+              @for (pago of pagosDraft(); track $index) {
+                <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3 space-y-2">
+                  <div class="flex items-center gap-2">
+                    <select 
+                      [ngModel]="pago.metodoPago"
+                      (ngModelChange)="updatePagoMetodo($index, $event)"
+                      class="h-9 bg-[#181818] border border-zinc-700 rounded-lg px-2.5 text-xs font-bold text-white focus:outline-none focus:border-red-500">
+                      <option value="efectivo">💵 Efectivo</option>
+                      <option value="tarjeta">💳 Tarjeta</option>
+                      <option value="transferencia">📲 Transferencia</option>
+                    </select>
+
+                    <div class="relative flex-1">
+                      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-mono text-xs">$</span>
+                      <input 
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        [ngModel]="pago.monto"
+                        (ngModelChange)="updatePagoMonto($index, $event)"
+                        class="w-full h-9 bg-[#181818] border border-zinc-700 rounded-lg pl-6 pr-3 text-white font-mono font-bold text-sm focus:outline-none focus:border-red-500" />
+                    </div>
+
+                    @if (pagosDraft().length > 1) {
+                      <button 
+                        type="button"
+                        (click)="removePagoLine($index)"
+                        class="w-9 h-9 bg-red-950/50 hover:bg-red-900/70 text-red-400 rounded-lg font-bold text-sm border border-red-800/40">
+                        &times;
+                      </button>
+                    }
+                  </div>
+
+                  @if (pago.metodoPago !== 'efectivo') {
+                    <input 
+                      type="text"
+                      [ngModel]="pago.idTransaccion"
+                      (ngModelChange)="updatePagoTransaccion($index, $event)"
+                      placeholder="Referencia / Autorización terminal (opcional)..."
+                      class="w-full h-8 bg-[#181818] border border-zinc-800 rounded-lg px-2.5 text-[11px] text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-600" />
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Desglose Abonado / Restante / Cambio -->
+            <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3 space-y-1.5 text-xs">
+              <div class="flex justify-between text-zinc-400">
+                <span>Total Abonado:</span>
+                <span class="font-mono font-bold text-white">{{ totalAbonadoCheckout() | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
+              </div>
+
+              @if (restanteCheckout() > 0) {
+                <div class="flex justify-between text-amber-400 font-bold">
+                  <span>Restante por Cubrir:</span>
+                  <span class="font-mono">{{ restanteCheckout() | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
+                </div>
+              } @else {
+                <div class="flex justify-between text-emerald-400 font-bold text-sm border-t border-zinc-800 pt-1.5">
+                  <span>Cambio a Entregar:</span>
+                  <span class="font-mono">{{ cambioCheckout() | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
+                </div>
+              }
+            </div>
+
+          </div>
+
+          <!-- Footer Botón Confirmar Pago -->
+          <div class="pt-4 mt-4 border-t border-zinc-800 flex items-center gap-2 shrink-0">
+            <button 
+              type="button"
+              (click)="closeCheckoutModal()"
+              class="px-4 h-11 bg-[#222222] text-zinc-300 text-xs font-semibold rounded-xl">
+              Cancelar
+            </button>
+            <button 
+              type="button"
+              [disabled]="restanteCheckout() > 0 || isProcessingPayment()"
+              (click)="procesarCobro()"
+              class="flex-1 h-11 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all">
+              {{ isProcessingPayment() ? 'Procesando Pago...' : 'Confirmar Pago y Cerrar Mesa' }}
+            </button>
+          </div>
+        }
+
+      </div>
+    </div>
+  }
+
 </div>

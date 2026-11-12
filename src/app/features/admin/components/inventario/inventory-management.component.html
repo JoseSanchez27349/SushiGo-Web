@@ -1,0 +1,405 @@
+<div class="p-4 sm:p-6 bg-[#0d0d0d] min-h-screen text-white font-sans select-none">
+
+  <!-- Navegación Superior -->
+  <div class="mb-4">
+    <a routerLink="/admin" class="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors">
+      ← Volver al Panel Admin
+    </a>
+  </div>
+
+  <!-- Encabezado y Acción Principal -->
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Inventario de Insumos y Recetas (BOM)</h1>
+      <p class="text-xs sm:text-sm text-zinc-400">Control de stock de materia prima, costos unitarios y escandallos por platillo</p>
+    </div>
+
+    @if (activeTab() === 'inventario') {
+      <button 
+        (click)="openCreateIngredientModal()"
+        class="bg-[#ab2424] hover:bg-[#961e1e] active:scale-95 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2">
+        <span>+ Nuevo Insumo</span>
+      </button>
+    }
+  </div>
+
+  <!-- Alertas -->
+  @if (successMessage()) {
+    <div class="mb-4 bg-emerald-950/80 border border-emerald-600/50 text-emerald-200 px-4 py-2.5 rounded-xl text-xs sm:text-sm flex justify-between items-center">
+      <span>{{ successMessage() }}</span>
+      <button (click)="successMessage.set('')" class="text-emerald-400 font-bold text-base">&times;</button>
+    </div>
+  }
+
+  @if (errorMessage() && !isIngModalOpen()) {
+    <div class="mb-4 bg-red-950/80 border border-red-600/50 text-red-200 px-4 py-2.5 rounded-xl text-xs sm:text-sm flex justify-between items-center">
+      <span>{{ errorMessage() }}</span>
+      <button (click)="errorMessage.set('')" class="text-red-400 font-bold text-base">&times;</button>
+    </div>
+  }
+
+  <!-- Pestañas (Tabs) -->
+  <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-3 mb-5">
+    <div class="flex items-center gap-2">
+      <button 
+        type="button"
+        (click)="activeTab.set('inventario')"
+        class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2"
+        [ngClass]="activeTab() === 'inventario' ? 'bg-[#ab2424] text-white shadow' : 'bg-[#181818] text-zinc-400 hover:text-white border border-zinc-800'">
+        <span>📦 Insumos ({{ ingredientes().length }})</span>
+        @if (lowStockCount() > 0) {
+          <span class="px-1.5 py-0.5 text-[10px] rounded-full bg-amber-500 text-black font-black">
+            {{ lowStockCount() }} bajos
+          </span>
+        }
+      </button>
+
+      <button 
+        type="button"
+        (click)="activeTab.set('recetas')"
+        class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all"
+        [ngClass]="activeTab() === 'recetas' ? 'bg-[#ab2424] text-white shadow' : 'bg-[#181818] text-zinc-400 hover:text-white border border-zinc-800'">
+        📋 Recetas & Costeo (BOM)
+      </button>
+    </div>
+
+    @if (activeTab() === 'inventario' && lowStockCount() > 0) {
+     <button 
+  type="button"
+  (click)="onlyLowStock.set(!onlyLowStock())"
+  class="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all"
+  [ngClass]="onlyLowStock() ? 'bg-amber-950/80 border-amber-500 text-amber-300' : 'bg-[#181818] border-zinc-800 text-zinc-400 hover:text-white'">
+  {{ onlyLowStock() ? '⚠️ Mostrando solo bajo stock' : 'Filtrar bajo stock (' + lowStockCount() + ')' }}
+</button>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-12 text-center text-zinc-400 text-sm flex flex-col items-center gap-2">
+      <span class="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></span>
+      <span>Cargando inventario y catálogo...</span>
+    </div>
+  } @else {
+
+    <!-- ==================== TAB 1: INVENTARIO DE INSUMOS ==================== -->
+    @if (activeTab() === 'inventario') {
+      <div class="bg-[#181818] border border-zinc-800/80 rounded-2xl shadow-xl overflow-hidden">
+        @if (filteredIngredientes().length === 0) {
+          <div class="p-12 text-center text-zinc-500 text-sm">
+            No hay insumos que coincidan con el filtro actual.
+          </div>
+        } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr class="bg-[#111111] border-b border-zinc-800 text-zinc-400 uppercase text-[10px] sm:text-xs tracking-wider">
+                  <th class="py-3.5 px-4 font-semibold">Insumo</th>
+                  <th class="py-3.5 px-4 font-semibold">Stock Actual</th>
+                  <th class="py-3.5 px-4 font-semibold">Stock Mínimo</th>
+                  <th class="py-3.5 px-4 font-semibold">Costo Unitario</th>
+                  <th class="py-3.5 px-4 font-semibold">Estado</th>
+                  <th class="py-3.5 px-4 font-semibold text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-zinc-800/60">
+                @for (ing of filteredIngredientes(); track ing.id) {
+                  <tr class="hover:bg-[#1c1c1c]/50 transition-colors">
+                    
+                    <td class="py-3 px-4 font-bold text-white">
+                      {{ ing.nombre }}
+                    </td>
+
+                    <td class="py-3 px-4 font-mono font-bold" [ngClass]="ing.bajoStock ? 'text-amber-400' : 'text-zinc-200'">
+                      {{ ing.stockActual }} <span class="text-xs text-zinc-500 font-sans">{{ ing.unidadMedida }}</span>
+                    </td>
+
+                    <td class="py-3 px-4 font-mono text-zinc-400">
+                      {{ ing.stockMinimo }} <span class="text-xs text-zinc-600 font-sans">{{ ing.unidadMedida }}</span>
+                    </td>
+
+                    <td class="py-3 px-4 font-mono text-emerald-400">
+                      {{ ing.costoUnitario | currency:'MXN':'symbol-narrow':'1.2-2' }}
+                      <span class="text-[11px] text-zinc-500 font-sans">/ {{ ing.unidadMedida }}</span>
+                    </td>
+
+                    <td class="py-3 px-4">
+                      @if (ing.bajoStock) {
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/70 text-amber-300 border border-amber-500/40">
+                          ⚠️ Reabastecer
+                        </span>
+                      } @else {
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-500/30">
+                          Óptimo
+                        </span>
+                      }
+                    </td>
+
+                    <td class="py-3 px-4 text-right">
+                      <div class="flex items-center justify-end gap-2">
+                        <button 
+                          (click)="openEditIngredientModal(ing)"
+                          title="Editar o Reabastecer"
+                          class="px-2.5 py-1.5 bg-[#222222] hover:bg-zinc-700 active:scale-95 text-zinc-200 text-xs font-semibold rounded-lg border border-zinc-700 transition-all">
+                          ✏️ Ajustar
+                        </button>
+                        <button 
+                          (click)="deleteIngredient(ing)"
+                          title="Eliminar"
+                          class="p-1.5 bg-[#222222] hover:bg-red-950/80 active:scale-95 text-red-400 rounded-lg border border-zinc-700 hover:border-red-800/60 transition-all">
+                          🗑️
+                        </button>
+                      </div>
+                    </td>
+
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ==================== TAB 2: RECETAS Y COSTEO (BOM) ==================== -->
+    @if (activeTab() === 'recetas') {
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        
+        <!-- Panel Izquierdo: Selector de Producto y Métricas Financieras -->
+        <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-5 flex flex-col justify-between space-y-5 h-fit">
+          <div>
+            <label class="block text-[11px] font-semibold text-zinc-400 uppercase mb-2">1. Selecciona un Platillo / Producto</label>
+            <select 
+              [ngModel]="selectedProductId()"
+              (ngModelChange)="onSelectProduct($event)"
+              class="w-full h-11 bg-[#111111] border border-zinc-700 rounded-xl px-3 text-white text-xs sm:text-sm font-semibold focus:outline-none focus:border-red-500">
+              @for (prod of productos(); track prod.id) {
+                <option [value]="prod.id">{{ prod.nombre }} ({{ prod.categoria.nombre }})</option>
+              }
+            </select>
+          </div>
+
+          @if (selectedProduct(); as prod) {
+            <div class="bg-[#111111] border border-zinc-800/90 rounded-2xl p-4 space-y-3">
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-zinc-400">Precio de Venta POS:</span>
+                <span class="font-mono font-bold text-white text-sm">
+                  {{ prod.precio | currency:'MXN':'symbol-narrow':'1.2-2' }}
+                </span>
+              </div>
+
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-zinc-400">Costo de Producción (BOM):</span>
+                <span class="font-mono font-bold text-amber-400 text-sm">
+                  {{ costoProduccionCalculado() | currency:'MXN':'symbol-narrow':'1.2-2' }}
+                </span>
+              </div>
+
+              <div class="border-t border-zinc-800 pt-2.5 flex justify-between items-center text-xs">
+                <span class="text-zinc-300 font-semibold">Margen Bruto Estimado:</span>
+                <span 
+                  class="font-mono font-black text-base"
+                  [ngClass]="margenEstimadoCalculado() >= 0 ? 'text-emerald-400' : 'text-red-400'">
+                  {{ margenEstimadoCalculado() | currency:'MXN':'symbol-narrow':'1.2-2' }}
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Panel Derecho: Constructor de Receta -->
+        <div class="lg:col-span-2 bg-[#181818] border border-zinc-800 rounded-2xl p-5 flex flex-col justify-between">
+          <div>
+            <h2 class="text-sm sm:text-base font-bold mb-1">2. Insumos Requeridos por Porción</h2>
+            <p class="text-xs text-zinc-400 mb-4">Al venderse este producto en el POS, el sistema descontará estas cantidades automáticamente.</p>
+
+            <!-- Barra para agregar ingrediente -->
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 bg-[#111111] p-3 rounded-xl border border-zinc-800 mb-4">
+              <div class="sm:col-span-6">
+                <select 
+                  [(ngModel)]="newRecipeItem.ingredienteId"
+                  class="w-full h-10 bg-[#181818] border border-zinc-700 rounded-xl px-3 text-white text-xs focus:outline-none focus:border-red-500">
+                  <option value="">-- Seleccionar Insumo --</option>
+                  @for (ing of ingredientes(); track ing.id) {
+                    <option [value]="ing.id">{{ ing.nombre }} ({{ ing.unidadMedida }})</option>
+                  }
+                </select>
+              </div>
+
+              <div class="sm:col-span-3">
+                <input 
+                  type="number" 
+                  step="0.01"
+                  min="0.01"
+                  [(ngModel)]="newRecipeItem.cantidad"
+                  placeholder="Cantidad"
+                  class="w-full h-10 bg-[#181818] border border-zinc-700 rounded-xl px-3 text-white font-mono text-xs focus:outline-none focus:border-red-500" />
+              </div>
+
+              <div class="sm:col-span-3">
+                <button 
+                  type="button"
+                  (click)="addIngredientToRecipe()"
+                  class="w-full h-10 bg-zinc-200 hover:bg-white active:scale-95 text-black font-bold text-xs rounded-xl transition-all">
+                  + Agregar
+                </button>
+              </div>
+            </div>
+
+            <!-- Tabla de ingredientes de la receta -->
+            @if (isLoadingRecipe()) {
+              <div class="py-10 text-center text-xs text-zinc-400">Cargando receta...</div>
+            } @else if (currentRecipeItems().length === 0) {
+              <div class="py-10 text-center text-xs text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
+                Este producto aún no tiene ingredientes configurados en su receta.
+              </div>
+            } @else {
+              <div class="overflow-x-auto border border-zinc-800 rounded-xl">
+                <table class="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr class="bg-[#111111] border-b border-zinc-800 text-zinc-400 uppercase text-[10px]">
+                      <th class="py-2.5 px-3">Insumo</th>
+                      <th class="py-2.5 px-3">Cantidad Requerida</th>
+                      <th class="py-2.5 px-3">Costo Parcial</th>
+                      <th class="py-2.5 px-3 text-right">Quitar</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-zinc-800/60">
+                    @for (item of currentRecipeItems(); track item.ingredienteId) {
+                      <tr class="hover:bg-[#1e1e1e]">
+                        <td class="py-2.5 px-3 font-bold text-white">{{ item.ingrediente.nombre }}</td>
+                        <td class="py-2.5 px-3 font-mono text-zinc-200">
+                          {{ item.cantidadRequerida }} <span class="text-zinc-500 font-sans">{{ item.ingrediente.unidadMedida }}</span>
+                        </td>
+                        <td class="py-2.5 px-3 font-mono text-amber-400">
+                          {{ (+item.ingrediente.costoUnitario * +item.cantidadRequerida) | currency:'MXN':'symbol-narrow':'1.2-2' }}
+                        </td>
+                        <td class="py-2.5 px-3 text-right">
+                          <button 
+                            type="button"
+                            (click)="removeRecipeItem(item)"
+                            class="text-red-400 hover:text-red-300 font-bold px-2 py-1 rounded hover:bg-red-950/50">
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+
+          <!-- Guardar Receta Completa -->
+          <div class="flex justify-end pt-5 mt-5 border-t border-zinc-800">
+            <button 
+              type="button"
+              [disabled]="isSaving() || !selectedProductId()"
+              (click)="saveFullRecipe()"
+              class="px-5 py-2.5 bg-[#ab2424] hover:bg-[#961e1e] active:scale-95 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all">
+              {{ isSaving() ? 'Guardando Receta...' : '💾 Guardar Receta del Producto' }}
+            </button>
+          </div>
+        </div>
+
+      </div>
+    }
+  }
+
+  <!-- ==================== MODAL CREAR / AJUSTAR INGREDIENTE ==================== -->
+  @if (isIngModalOpen()) {
+    <div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-[#181818] border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
+          <h2 class="text-base font-bold">
+            {{ editingIngredient() ? 'Ajustar / Reabastecer Insumo' : 'Nuevo Insumo de Inventario' }}
+          </h2>
+          <button (click)="closeIngredientModal()" class="text-zinc-400 hover:text-white text-xl font-bold">&times;</button>
+        </div>
+
+        @if (errorMessage()) {
+          <div class="mb-3 bg-red-950/80 border border-red-600/50 text-red-200 px-3 py-2 rounded-xl text-xs">
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <form (submit)="$event.preventDefault(); saveIngredient()" class="space-y-3">
+          <div class="grid grid-cols-3 gap-3">
+            <div class="col-span-2">
+              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Nombre del Insumo</label>
+              <input 
+                type="text" 
+                maxlength="100"
+                [(ngModel)]="ingForm.nombre" 
+                name="ingNombre"
+                placeholder="Ej. Salmón Fresco"
+                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white text-xs sm:text-sm focus:outline-none focus:border-red-500" />
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Unidad</label>
+              <select 
+                [(ngModel)]="ingForm.unidadMedida" 
+                name="ingUnidad"
+                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-2.5 text-white text-xs sm:text-sm focus:outline-none focus:border-red-500">
+                <option value="g">g (Gramos)</option>
+                <option value="kg">kg (Kilos)</option>
+                <option value="ml">ml (Mililitros)</option>
+                <option value="L">L (Litros)</option>
+                <option value="pza">pza (Piezas)</option>
+                <option value="hoja">hoja (Alga)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Stock Actual</label>
+              <input 
+                type="number" 
+                step="0.01"
+                min="0"
+                [(ngModel)]="ingForm.stockActual" 
+                name="ingStockActual"
+                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-red-500" />
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Stock Mínimo (Alerta)</label>
+              <input 
+                type="number" 
+                step="0.01"
+                min="0"
+                [(ngModel)]="ingForm.stockMinimo" 
+                name="ingStockMinimo"
+                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-red-500" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">
+              Costo Unitario por {{ ingForm.unidadMedida }} (MXN)
+            </label>
+            <input 
+              type="number" 
+              step="0.0001"
+              min="0"
+              [(ngModel)]="ingForm.costoUnitario" 
+              name="ingCosto"
+              placeholder="0.35"
+              class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-red-500" />
+          </div>
+
+          <div class="flex justify-end gap-2 pt-4 border-t border-zinc-800">
+            <button type="button" (click)="closeIngredientModal()" class="px-4 py-2 bg-[#222222] text-zinc-300 text-xs font-semibold rounded-xl">
+              Cancelar
+            </button>
+            <button type="submit" [disabled]="isSaving()" class="px-5 py-2 bg-[#ab2424] hover:bg-[#961e1e] text-white text-xs font-bold rounded-xl">
+              {{ isSaving() ? 'Guardando...' : 'Guardar Insumo' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+</div>

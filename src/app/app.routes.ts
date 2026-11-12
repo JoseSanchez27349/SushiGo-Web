@@ -3,27 +3,51 @@ import { PosLoginComponent } from './features/auth/pos-login.component';
 import { PosDashboardComponent } from './features/pos/components/dashboard/pos-dashboard.component';
 import { KitchenDashboardComponent } from './features/kitchen/components/Dashboard/kitchen-dashboard.component';
 import { AdminDashboardComponent } from './features/admin/components/dashboard/admin-dashboard.component';
+import { StaffManagementComponent } from './features/admin/components/Staff/staff-management.component';
+import { authGuard, publicGuard } from './core/guards/auth.guard';
+import { MenuManagementComponent } from './features/admin/components/menu/menu-management.component';
+import { InventoryManagementComponent } from './features/admin/components/inventario/inventory-management.component';
+import { TableManagementComponent } from './features/admin/components/mesas/table-management.component';
 
 export const routes: Routes = [
-  {
-    path: '',
-    pathMatch: 'full',
-    loadComponent: () => import('./pages/home/home').then(m => m.Home),
-    title: 'SushiGo | Inicio'
+  // Ruta pública de Login (Bloqueada si ya estás autenticado)
+  { 
+    path: 'login', 
+    component: PosLoginComponent,
+    canActivate: [publicGuard] 
   },
-  {
-    path: 'menu',
-    loadComponent: () => import('./pages/menu/menu').then(m => m.Menu),
-    title: 'SushiGo | Menú'
+
+  // Terminal POS (Meseros y Administradores)
+  { 
+    path: 'pos', 
+    component: PosDashboardComponent,
+    canActivate: [authGuard],
+    data: { roles: ['Mesero', 'Admin'] }
   },
-  {
-    path: 'contacto',
-    loadComponent: () => import('./pages/contact/contact').then(m => m.Contact),
-    title: 'SushiGo | Contacto'
+
+  // Pantalla KDS (Cocina y Administradores)
+  { 
+    path: 'kitchen', 
+    component: KitchenDashboardComponent,
+    canActivate: [authGuard],
+    data: { roles: ['Cocina', 'Admin'] }
   },
-  { path: 'login', component: PosLoginComponent },
-  { path: 'pos', component: PosDashboardComponent },
-  { path: 'kitchen', component: KitchenDashboardComponent },
-  { path: 'admin', component: AdminDashboardComponent },
+
+  // Módulo de Administración (Exclusivo para Admin)
+  {
+    path: 'admin',
+    canActivate: [authGuard],
+    data: { roles: ['Admin'] },
+    children: [
+      { path: '', component: AdminDashboardComponent },
+      { path: 'staff', component: StaffManagementComponent },
+      { path: 'menu', component: MenuManagementComponent },
+      { path: 'inventory', component: InventoryManagementComponent },
+      { path: 'tables',component: TableManagementComponent},
+    ]
+  },
+
+  // Redirecciones por defecto
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: '**', redirectTo: 'login' }
 ];
