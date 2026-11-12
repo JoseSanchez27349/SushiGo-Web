@@ -1,0 +1,40 @@
+<div class="min-h-screen bg-[#0d0d0d] text-white flex flex-col font-sans select-none">
+  <!-- Navbar Terminal POS -->
+  <header class="bg-[#181818] border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-[#ab2424] rounded-xl flex items-center justify-center font-black text-lg shadow-md shadow-red-900/30">
+        S
+      </div>
+      <div>
+        <h1 class="font-bold text-base tracking-wide">SushiGo — Terminal POS</h1>
+        <p class="text-xs text-zinc-400">Rol: {{ user()?.role }} | Código: {{ user()?.codigoEmpleado }}</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <span class="text-sm font-medium text-zinc-300">👋 Hola, {{ user()?.nombre }}</span>
+      <button 
+        (click)="onLogout()" 
+        class="bg-[#222222] hover:bg-red-950/40 text-zinc-300 hover:text-red-400 border border-zinc-800 hover:border-red-800/50 text-xs px-3 py-2 rounded-xl transition-all active:scale-95">
+        Cerrar Sesión
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="flex-1 p-6 flex flex-col items-center justify-center">
+    <div class="bg-[#181818] border border-zinc-800 rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl">
+      <div class="w-16 h-16 bg-red-950/40 border border-red-500/30 text-red-500 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">
+        🍣
+      </div>
+      <h2 class="text-2xl font-bold mb-2">Panel de Mesas & Pedidos</h2>
+      <p class="text-sm text-zinc-400 mb-6">Sesión iniciada correctamente como personal operativo del POS.</p>
+
+      <div class="bg-[#111111] p-4 rounded-2xl border border-zinc-800/80 text-left text-xs font-mono text-zinc-400 space-y-1.5">
+        <p><span class="text-zinc-600 font-sans font-semibold">ID Usuario:</span> {{ user()?.id }}</p>
+        <p><span class="text-zinc-600 font-sans font-semibold">Nombre:</span> {{ user()?.nombre }}</p>
+        <p><span class="text-zinc-600 font-sans font-semibold">Rol Activo:</span> {{ user()?.role }}</p>
+      </div>
+    </div>
+  </main>
+</div>
