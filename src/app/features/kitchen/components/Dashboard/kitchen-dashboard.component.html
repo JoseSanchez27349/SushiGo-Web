@@ -7,7 +7,14 @@
         🔥
       </div>
       <div>
-        <h1 class="font-bold text-sm sm:text-base tracking-wide leading-tight">SushiGo · Monitor de Cocina (KDS)</h1>
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-sm sm:text-base tracking-wide leading-tight">SushiGo · Monitor de Cocina (KDS)</h1>
+          <span 
+            [title]="socketConnected() ? 'Conectado en tiempo real' : 'Reconectando...'"
+            class="w-2 h-2 rounded-full"
+            [ngClass]="socketConnected() ? 'bg-emerald-400' : 'bg-red-500 animate-ping'">
+          </span>
+        </div>
         <p class="text-[11px] text-zinc-400">
           {{ user()?.nombre }} · <span class="text-amber-400 font-semibold">{{ user()?.role }}</span>
         </p>
@@ -29,8 +36,20 @@
       }
     </div>
 
-    <!-- Controles -->
+    <!-- Controles y cambio rápido de módulo -->
     <div class="flex items-center gap-2">
+      <button 
+        type="button"
+        (click)="toggleSound()"
+        title="Activar o silenciar timbre de nuevas comandas"
+        class="h-9 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5"
+        [ngClass]="soundEnabled() 
+          ? 'bg-zinc-900 border-zinc-700 text-amber-300 hover:bg-zinc-800' 
+          : 'bg-[#222222] border-zinc-800 text-zinc-500'">
+        <span>{{ soundEnabled() ? '🔔' : '🔕' }}</span>
+        <span class="hidden sm:inline">{{ soundEnabled() ? 'Sonido' : 'Mudo' }}</span>
+      </button>
+
       <button 
         type="button"
         (click)="toggleAutoRefresh()"
@@ -51,12 +70,21 @@
       </button>
 
       @if (isAdmin()) {
-        <a 
-          routerLink="/admin"
-          class="h-9 px-3 bg-[#222222] hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-xl border border-zinc-700 flex items-center gap-1 transition-all">
-          <span>⚙️</span>
-          <span class="hidden md:inline">Admin</span>
-        </a>
+        <div class="hidden md:flex items-center bg-[#111111] border border-zinc-800 rounded-xl p-0.5 text-xs font-semibold">
+          <a 
+            routerLink="/pos"
+            class="px-2.5 py-1.5 rounded-lg text-zinc-400 hover:text-white transition-colors">
+            POS
+          </a>
+          <span class="px-2.5 py-1.5 rounded-lg bg-[#ab2424] text-white shadow">
+            Cocina
+          </span>
+          <a 
+            routerLink="/admin"
+            class="px-2.5 py-1.5 rounded-lg text-zinc-400 hover:text-white transition-colors">
+            Admin
+          </a>
+        </div>
       }
 
       <button 
@@ -81,7 +109,7 @@
   }
 
   <!-- Barra de Filtros -->
-  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 pt-4 flex items-center justify-between gap-2">
+  <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 pt-4 flex flex-wrap items-center justify-between gap-2">
     <div class="flex items-center gap-2">
       <button 
         type="button"
@@ -105,6 +133,10 @@
         🔥 En Preparación ({{ stats().enPreparacion }})
       </button>
     </div>
+
+    <span class="text-[11px] text-zinc-500">
+      Toca cada platillo para darle salida individual o usa el botón inferior para toda la comanda
+    </span>
   </div>
 
   <!-- Grid de Comandas -->
@@ -118,12 +150,13 @@
       <div class="bg-[#181818] border border-dashed border-zinc-800 rounded-2xl p-16 text-center space-y-2">
         <div class="text-4xl">🍣</div>
         <h2 class="text-base font-bold text-zinc-200">Sin comandas pendientes</h2>
-        <p class="text-xs text-zinc-500">Las nuevas órdenes enviadas desde el POS aparecerán aquí automáticamente.</p>
+        <p class="text-xs text-zinc-500">Las nuevas órdenes y rondas enviadas desde el POS aparecerán aquí al instante.</p>
       </div>
     } @else {
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
         @for (comanda of filteredComandas(); track comanda.id) {
           @let timer = getLiveTimer(comanda);
+          @let listosCount = getItemsListosCount(comanda);
 
           <article 
             class="bg-[#181818] border-2 rounded-2xl overflow-hidden shadow-xl flex flex-col transition-all"
@@ -150,15 +183,17 @@
                     {{ getMesaLabel(comanda) }}
                   </span>
                 </div>
-                <div class="text-[11px] text-zinc-400 mt-0.5">
-                  {{ comanda.estadoCocina === 'en_espera' ? '⏳ En espera' : '🔥 Preparando' }}
+                <div class="text-[11px] text-zinc-400 mt-0.5 flex items-center gap-1.5">
+                  <span class="font-mono font-bold text-emerald-400">
+                    {{ listosCount }}/{{ comanda.orden.detalles.length }} listos
+                  </span>
                   @if (comanda.cocinero) {
-                    · <span>Chef: {{ comanda.cocinero.nombre }}</span>
+                    <span>· Chef: {{ comanda.cocinero.nombre }}</span>
                   }
                 </div>
               </div>
 
-              <!-- Reloj en vivo -->
+              <!-- Reloj general ininterrumpido + tiempo secundario de preparación -->
               <div class="text-right">
                 <div 
                   class="font-mono font-black text-base px-2.5 py-1 rounded-lg border"
@@ -167,24 +202,102 @@
                     'bg-amber-950 text-amber-300 border-amber-500/40': timer.nivelAlerta === 'advertencia',
                     'bg-zinc-900 text-emerald-400 border-zinc-700': timer.nivelAlerta === 'normal'
                   }">
-                  {{ timer.textoTiempo }}
+                  ⏱ {{ timer.textoTiempo }}
                 </div>
-                <div class="text-[10px] text-zinc-500 mt-0.5 font-mono">
-                  Est. {{ comanda.tiempoEstimadoMinutos }} min
+                <div class="text-[10px] text-zinc-400 mt-0.5 font-mono">
+                  @if (timer.textoPreparacion) {
+                    <span>Prep: {{ timer.textoPreparacion }} · </span>
+                  }
+                  <span>Est. {{ comanda.tiempoEstimadoMinutos }}m</span>
                 </div>
               </div>
             </div>
 
-            <!-- Lista de Platillos -->
-            <div class="p-4 space-y-2.5 flex-1">
-              @for (item of comanda.orden.detalles; track $index) {
-                <div class="flex items-start gap-2.5 bg-[#111111] border border-zinc-800/80 rounded-xl px-3 py-2">
-                  <span class="px-2 py-0.5 rounded-lg bg-[#ab2424] text-white font-mono font-black text-sm shrink-0">
-                    {{ item.cantidad }}x
-                  </span>
-                  <span class="font-bold text-sm text-zinc-100 leading-snug pt-0.5">
-                    {{ item.producto.nombre }}
-                  </span>
+            <!-- Lista de Platillos (Salida Producto por Producto) -->
+            <div class="p-3.5 space-y-2 flex-1">
+              @for (item of comanda.orden.detalles; track item.id) {
+                @let itemEstado = item.estadoCocina || 'en_espera';
+                @let isItemUpdating = updatingItemId() === item.id;
+
+                <div 
+                  class="rounded-xl px-3 py-2.5 border transition-all flex items-center justify-between gap-2"
+                  [ngClass]="{
+                    'bg-emerald-950/35 border-emerald-500/40 opacity-75': itemEstado === 'listo',
+                    'bg-amber-950/35 border-amber-500/50': itemEstado === 'en_preparacion',
+                    'bg-[#111111] border-zinc-800/90 hover:border-zinc-600': itemEstado === 'en_espera'
+                  }">
+
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2">
+                      <span 
+                        class="px-2 py-0.5 rounded-lg font-mono font-black text-xs shrink-0"
+                        [ngClass]="itemEstado === 'listo' ? 'bg-emerald-600 text-white' : 'bg-[#ab2424] text-white'">
+                        {{ item.cantidad }}x
+                      </span>
+
+                      <span 
+                        class="font-bold text-sm leading-snug truncate"
+                        [ngClass]="itemEstado === 'listo' ? 'line-through text-zinc-400' : 'text-zinc-100'">
+                        {{ item.producto.nombre }}
+                      </span>
+                    </div>
+
+                    <!-- Etiqueta de Ronda adicional y su propio reloj -->
+                    <div class="flex items-center gap-2 mt-1 pl-1">
+                      @if ((item.ronda || 1) > 1) {
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-950 text-sky-300 border border-sky-500/40">
+                          ➕ Ronda {{ item.ronda }}
+                        </span>
+                        @if (itemEstado !== 'listo' && item.creadoEn) {
+                          <span class="text-[10px] font-mono text-sky-400">
+                            ⏱ {{ getItemTimerText(item) }}
+                          </span>
+                        }
+                      }
+
+                      <span 
+                        class="text-[10px] font-semibold"
+                        [ngClass]="{
+                          'text-emerald-400': itemEstado === 'listo',
+                          'text-amber-400': itemEstado === 'en_preparacion',
+                          'text-zinc-500': itemEstado === 'en_espera'
+                        }">
+                        {{ itemEstado === 'listo' ? 'Entregado / Listo' : itemEstado === 'en_preparacion' ? 'En fuego...' : 'En espera' }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Botón de acción individual por producto -->
+                  <div class="shrink-0">
+                    @if (itemEstado === 'en_espera') {
+                      <button 
+                        type="button"
+                        [disabled]="isItemUpdating"
+                        (click)="avanzarEstadoItem(comanda, item, 'en_preparacion')"
+                        title="Iniciar este platillo"
+                        class="h-9 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 active:scale-95 text-black font-extrabold text-xs transition-all">
+                        🔥 Iniciar
+                      </button>
+                    } @else if (itemEstado === 'en_preparacion') {
+                      <button 
+                        type="button"
+                        [disabled]="isItemUpdating"
+                        (click)="avanzarEstadoItem(comanda, item, 'listo')"
+                        title="Dar salida a este platillo"
+                        class="h-9 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-xs transition-all">
+                        ✅ Listo
+                      </button>
+                    } @else {
+                      <button 
+                        type="button"
+                        [disabled]="isItemUpdating"
+                        (click)="avanzarEstadoItem(comanda, item, 'en_preparacion')"
+                        title="Regresar platillo a preparación"
+                        class="h-8 px-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold border border-zinc-700 transition-all">
+                        ↩
+                      </button>
+                    }
+                  </div>
                 </div>
               }
 
@@ -199,35 +312,26 @@
               }
             </div>
 
-            <!-- Botones de Acción -->
+            <!-- Botón de Acción Global de la Comanda -->
             <div class="p-3 bg-[#141414] border-t border-zinc-800">
               @if (comanda.estadoCocina === 'en_espera') {
                 <button 
                   type="button"
                   [disabled]="updatingOrderId() === comanda.ordenId"
                   (click)="avanzarEstado(comanda, 'en_preparacion')"
-                  class="w-full h-11 bg-amber-500 hover:bg-amber-400 active:scale-[0.98] disabled:opacity-50 text-black font-black text-xs sm:text-sm rounded-xl shadow transition-all">
-                  {{ updatingOrderId() === comanda.ordenId ? 'Iniciando...' : '🔥 Empezar a Preparar' }}
+                  class="w-full h-10 bg-amber-500/90 hover:bg-amber-400 active:scale-[0.98] disabled:opacity-50 text-black font-black text-xs rounded-xl shadow transition-all">
+                  {{ updatingOrderId() === comanda.ordenId ? 'Iniciando...' : '🔥 Iniciar Toda la Comanda' }}
                 </button>
-              } @else if (comanda.estadoCocina === 'en_preparacion') {
-                <div class="flex items-center gap-2">
-                  <button 
-                    type="button"
-                    [disabled]="updatingOrderId() === comanda.ordenId"
-                    (click)="avanzarEstado(comanda, 'en_espera')"
-                    title="Regresar a espera"
-                    class="h-11 px-3 bg-[#222222] hover:bg-zinc-700 text-zinc-300 text-xs font-bold rounded-xl border border-zinc-700 transition-all">
-                    ↩
-                  </button>
-                  <button 
-                    type="button"
-                    [disabled]="updatingOrderId() === comanda.ordenId"
-                    (click)="avanzarEstado(comanda, 'listo')"
-                    class="flex-1 h-11 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] disabled:opacity-50 text-white font-black text-xs sm:text-sm rounded-xl shadow transition-all">
-                    {{ updatingOrderId() === comanda.ordenId ? 'Finalizando...' : '✅ Marcar Listo' }}
-                  </button>
-                </div>
+              } @else {
+                <button 
+                  type="button"
+                  [disabled]="updatingOrderId() === comanda.ordenId"
+                  (click)="avanzarEstado(comanda, 'listo')"
+                  class="w-full h-10 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] disabled:opacity-50 text-white font-black text-xs rounded-xl shadow transition-all">
+                  {{ updatingOrderId() === comanda.ordenId ? 'Finalizando...' : '✅ Dar Salida a Todo el Pedido' }}
+                </button>
               }
+              
             </div>
 
           </article>

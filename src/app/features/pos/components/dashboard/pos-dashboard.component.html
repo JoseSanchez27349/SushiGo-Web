@@ -9,7 +9,14 @@
         🍣
       </div>
       <div class="hidden sm:block">
-        <h1 class="font-bold text-sm tracking-wide leading-tight">SushiGo POS</h1>
+        <div class="flex items-center gap-1.5">
+          <h1 class="font-bold text-sm tracking-wide leading-tight">SushiGo POS</h1>
+          <span 
+            [title]="socketConnected() ? 'Conectado en tiempo real' : 'Reconectando...'"
+            class="w-2 h-2 rounded-full"
+            [ngClass]="socketConnected() ? 'bg-emerald-400' : 'bg-red-500 animate-ping'">
+          </span>
+        </div>
         <p class="text-[11px] text-zinc-400">
           {{ user()?.nombre }} · <span class="text-red-400 font-semibold">{{ user()?.role }}</span>
         </p>
@@ -36,8 +43,25 @@
       </div>
     </div>
 
-    <!-- Acciones de sesión y Órdenes Activas / Caja -->
+    <!-- Acciones de sesión, cambio de módulo y Órdenes Activas / Caja -->
     <div class="flex items-center gap-2">
+      <!-- Botón Turno / Fondo de Gaveta -->
+      <button
+        type="button"
+        (click)="isTurnoModalOpen.set(true)"
+        class="h-9 px-3 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+        [ngClass]="turnoActivo()
+          ? 'bg-emerald-950/70 hover:bg-emerald-900/70 border-emerald-500/40 text-emerald-300'
+          : 'bg-amber-950/70 hover:bg-amber-900/70 border-amber-500/50 text-amber-300 animate-pulse'">
+        <span>💵</span>
+        @if (turnoActivo()) {
+          <span class="hidden sm:inline">Gaveta:</span>
+          <span class="font-mono">{{ turnoActivo()!.efectivoEnGavetaEsperado | currency:'MXN':'symbol-narrow':'1.0-0' }}</span>
+        } @else {
+          <span>Abrir Turno</span>
+        }
+      </button>
+
       <button 
         type="button"
         (click)="openOrdersModal('todas')"
@@ -59,6 +83,17 @@
 
       <button 
         type="button"
+        (click)="toggleSound()"
+        title="Activar o silenciar alertas sonoras de cocina"
+        class="h-9 px-3 rounded-xl text-xs font-semibold border transition-all"
+        [ngClass]="soundEnabled() 
+          ? 'bg-[#222222] border-zinc-700 text-amber-300 hover:bg-zinc-700' 
+          : 'bg-[#181818] border-zinc-800 text-zinc-500'">
+        {{ soundEnabled() ? '🔔' : '🔕' }}
+      </button>
+
+      <button 
+        type="button"
         (click)="refreshAll()"
         title="Actualizar menú, mesas y stock"
         class="h-9 px-3 bg-[#222222] hover:bg-zinc-700 active:scale-95 text-zinc-300 text-xs font-semibold rounded-xl border border-zinc-700 transition-all">
@@ -66,12 +101,21 @@
       </button>
 
       @if (isAdmin()) {
-        <a 
-          routerLink="/admin"
-          class="h-9 px-3 bg-[#222222] hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-xl border border-zinc-700 flex items-center gap-1.5 transition-all">
-          <span>⚙️</span>
-          <span class="hidden md:inline">Admin</span>
-        </a>
+        <div class="hidden md:flex items-center bg-[#111111] border border-zinc-800 rounded-xl p-0.5 text-xs font-semibold">
+          <span class="px-2.5 py-1.5 rounded-lg bg-[#ab2424] text-white shadow">
+            POS
+          </span>
+          <a 
+            routerLink="/kitchen"
+            class="px-2.5 py-1.5 rounded-lg text-zinc-400 hover:text-white transition-colors">
+            Cocina
+          </a>
+          <a 
+            routerLink="/admin"
+            class="px-2.5 py-1.5 rounded-lg text-zinc-400 hover:text-white transition-colors">
+            Admin
+          </a>
+        </div>
       }
 
       <button 
@@ -284,7 +328,9 @@
       <div class="p-3 bg-[#181818] border-b border-zinc-800 space-y-2.5 shrink-0">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="font-bold text-sm text-white">Comanda Actual</h2>
+            <h2 class="font-bold text-sm text-white">
+              {{ appendTargetOrder() ? 'Agregar Ronda a Cuenta' : 'Comanda Actual' }}
+            </h2>
             <p class="text-[11px] text-zinc-400">{{ totalArticulos() }} artículos</p>
           </div>
 
@@ -297,6 +343,39 @@
             </button>
           }
         </div>
+
+        <!-- Banner Modo Ronda Adicional -->
+        @if (appendTargetOrder(); as target) {
+          <div class="bg-sky-950/70 border border-sky-500/40 rounded-xl px-3 py-2 flex items-center justify-between gap-2 text-xs">
+            <div class="min-w-0">
+              <div class="font-bold text-sky-200 truncate">
+                ➕ Sumando a {{ formatFolio(target) }} ({{ target.mesa ? getMesaLabel(target.mesa) : 'Para Llevar' }})
+              </div>
+              <div class="text-[10px] text-sky-300/80">
+                Saldo actual: {{ target.total | currency:'MXN':'symbol-narrow':'1.2-2' }}
+              </div>
+            </div>
+            <button 
+              type="button"
+              (click)="clearAppendTarget()"
+              title="Crear cuenta nueva por separado"
+              class="px-2 py-1 rounded-lg bg-sky-900/80 hover:bg-sky-800 text-[10px] font-bold text-sky-200 shrink-0">
+              Nueva cuenta
+            </button>
+          </div>
+        } @else if (activeOrderForSelectedMesa()) {
+          <div class="bg-amber-950/50 border border-amber-500/30 rounded-xl px-3 py-1.5 flex items-center justify-between gap-2 text-[11px]">
+            <span class="text-amber-200 truncate">
+              Mesa con cuenta {{ formatFolio(activeOrderForSelectedMesa()!) }}
+            </span>
+            <button 
+              type="button"
+              (click)="appendTargetOrder.set(activeOrderForSelectedMesa())"
+              class="px-2 py-0.5 rounded-md bg-amber-500 text-black font-bold text-[10px] shrink-0">
+              + Sumar ahí
+            </button>
+          </div>
+        }
 
         <!-- Selector Tipo de Orden -->
         <div class="grid grid-cols-2 gap-1.5 bg-[#111111] p-1 rounded-xl border border-zinc-800">
@@ -359,7 +438,9 @@
         @if (cart().length === 0) {
           <div class="h-full flex flex-col items-center justify-center text-center text-zinc-500 px-4">
             <span class="text-2xl mb-1">🧾</span>
-            <p class="text-xs font-semibold text-zinc-400">La comanda está vacía</p>
+            <p class="text-xs font-semibold text-zinc-400">
+              {{ appendTargetOrder() ? 'Agrega los platillos de la nueva ronda' : 'La comanda está vacía' }}
+            </p>
             <p class="text-[11px] mt-0.5">Selecciona los platillos del menú para comenzar.</p>
           </div>
         } @else {
@@ -422,7 +503,9 @@
         }
 
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-zinc-400 uppercase">Total</span>
+          <span class="text-xs font-semibold text-zinc-400 uppercase">
+            {{ appendTargetOrder() ? 'Subtotal Ronda' : 'Total' }}
+          </span>
           <span class="font-mono font-black text-lg text-white">
             {{ totalComanda() | currency:'MXN':'symbol-narrow':'1.2-2' }}
           </span>
@@ -432,10 +515,13 @@
           type="button"
           [disabled]="cart().length === 0 || isSubmitting()"
           (click)="submitOrden()"
-          class="w-full h-11 bg-[#ab2424] hover:bg-[#961e1e] active:scale-[0.99] disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+          class="w-full h-11 active:scale-[0.99] disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+          [ngClass]="appendTargetOrder() ? 'bg-sky-600 hover:bg-sky-500' : 'bg-[#ab2424] hover:bg-[#961e1e]'">
           @if (isSubmitting()) {
             <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
             <span>Enviando a Cocina...</span>
+          } @else if (appendTargetOrder()) {
+            <span>➕ Agregar Ronda a {{ formatFolio(appendTargetOrder()!) }}</span>
           } @else {
             <span>Enviar Comanda a Cocina</span>
           }
@@ -454,7 +540,7 @@
         <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-3 shrink-0">
           <div>
             <h2 class="text-base font-bold text-white">Cuentas Abiertas ({{ ordenesActivas().length }})</h2>
-            <p class="text-[11px] text-zinc-400">Monitorea el avance en cocina y cobra cuando el pedido esté listo</p>
+            <p class="text-[11px] text-zinc-400">Agrega rondas, imprime precuentas, cancela o cobra cuentas listas</p>
           </div>
           <button type="button" (click)="isOrdersModalOpen.set(false)" class="text-zinc-400 hover:text-white text-xl font-bold px-2">&times;</button>
         </div>
@@ -532,6 +618,11 @@
                       }">
                       {{ getEstadoOrdenLabel(ord) }}
                     </span>
+                    @if (getOrdenElapsedTimer(ord)) {
+                      <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-zinc-900 text-zinc-300 border border-zinc-700">
+                        ⏱ {{ getOrdenElapsedTimer(ord) }}
+                      </span>
+                    }
                   </div>
                   <span class="font-mono font-bold text-sm text-emerald-400 shrink-0">
                     {{ ord.total | currency:'MXN':'symbol-narrow':'1.2-2' }}
@@ -553,21 +644,24 @@
                   </div>
                 }
 
-                <!-- Acciones de Precuenta y Cobro -->
+                <!-- Acciones: Cancelar, + Ronda, Precuenta y Cobro -->
                 <div class="pt-2 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
-                  @if (getEstadoCocinaNormalizado(ord) === 'sin_iniciar') {
-                    <span class="text-[11px] text-zinc-400 font-medium">
-                      🔒 Sin iniciar en cocina · En cola de espera
-                    </span>
-                  } @else if (getEstadoCocinaNormalizado(ord) === 'en_preparacion') {
-                    <span class="text-[11px] text-amber-400/90 font-medium">
-                      🔒 En preparación · Espera liberación para cobrar
-                    </span>
-                  } @else {
-                    <span class="text-[11px] text-emerald-400 font-semibold">
-                      🍽️ Pedido liberado y listo para entrega/cobro
-                    </span>
-                  }
+                  <div class="flex items-center gap-1.5">
+                    <button 
+                      type="button"
+                      (click)="openCancelOrderModal(ord)"
+                      title="Cancelar orden y devolver inventario"
+                      class="px-2.5 py-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 text-xs font-semibold rounded-lg border border-red-800/40 transition-all">
+                      🗑️ Cancelar
+                    </button>
+
+                    <button 
+                      type="button"
+                      (click)="startAppendToOrder(ord)"
+                      class="px-2.5 py-1.5 bg-sky-950/60 hover:bg-sky-900/70 text-sky-300 text-xs font-bold rounded-lg border border-sky-500/40 transition-all">
+                      ➕ Ronda
+                    </button>
+                  </div>
 
                   <div class="flex items-center gap-2 ml-auto">
                     <button 
@@ -601,6 +695,67 @@
           }
         </div>
 
+      </div>
+    </div>
+  }
+
+  <!-- ==================== MODAL CANCELAR ORDEN ==================== -->
+  @if (cancelTargetOrder(); as ord) {
+    <div (click)="closeCancelOrderModal()" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+      <div (click)="$event.stopPropagation()" class="bg-[#181818] border border-zinc-800 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+          <div>
+            <h2 class="text-base font-bold text-red-400">Cancelar Orden {{ formatFolio(ord) }}</h2>
+            <p class="text-[11px] text-zinc-400">
+              {{ ord.mesa ? getMesaLabel(ord.mesa) : 'Para Llevar' }} · Total {{ ord.total | currency:'MXN':'symbol-narrow':'1.2-2' }}
+            </p>
+          </div>
+          <button type="button" (click)="closeCancelOrderModal()" class="text-zinc-400 hover:text-white text-xl font-bold">&times;</button>
+        </div>
+
+        <div class="bg-amber-950/35 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200 leading-relaxed">
+          Al cancelar esta orden se retirará de cocina, se <strong>reintegrarán los insumos al inventario</strong> y se liberará la mesa si no tiene otras cuentas activas.
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-xs font-semibold text-zinc-300">Motivo de cancelación</label>
+          <div class="flex flex-wrap gap-1.5">
+            @for (opcion of ['Error de captura', 'Cliente canceló pedido', 'Tiempo de espera', 'Insumo agotado']; track opcion) {
+              <button 
+                type="button"
+                (click)="cancelMotivo.set(opcion)"
+                class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all"
+                [ngClass]="cancelMotivo() === opcion 
+                  ? 'bg-red-600 text-white border-red-500' 
+                  : 'bg-[#111111] text-zinc-300 border-zinc-800 hover:border-zinc-600'">
+                {{ opcion }}
+              </button>
+            }
+          </div>
+
+          <input 
+            type="text"
+            [ngModel]="cancelMotivo()"
+            (ngModelChange)="cancelMotivo.set($event)"
+            placeholder="Escribe o detalla el motivo..."
+            class="w-full h-10 bg-[#111111] border border-zinc-700 rounded-xl px-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500" />
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800">
+          <button 
+            type="button"
+            (click)="closeCancelOrderModal()"
+            class="px-4 h-10 bg-[#222222] text-zinc-300 text-xs font-semibold rounded-xl">
+            Volver
+          </button>
+          <button 
+            type="button"
+            [disabled]="!cancelMotivo().trim() || isCancelingOrder()"
+            (click)="confirmarCancelacionOrden()"
+            class="px-5 h-10 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow transition-all">
+            {{ isCancelingOrder() ? 'Cancelando...' : 'Confirmar Cancelación' }}
+          </button>
+        </div>
       </div>
     </div>
   }
@@ -685,7 +840,7 @@
               </div>
             </div>
 
-            <!-- Botones rápidos de efectivo (si solo hay 1 línea en efectivo) -->
+            <!-- Botones rápidos de efectivo -->
             @if (pagosDraft().length === 1 && pagosDraft()[0].metodoPago === 'efectivo') {
               <div class="flex flex-wrap items-center gap-1.5">
                 <span class="text-[11px] text-zinc-400 mr-1">Efectivo rápido:</span>
@@ -801,6 +956,13 @@
 
       </div>
     </div>
+  }
+
+  <!-- ==================== MODAL CONTROL DE TURNO Y CORTE DE CAJA ==================== -->
+  @if (isTurnoModalOpen()) {
+    <app-pos-turno-modal
+      (closed)="isTurnoModalOpen.set(false); loadMiTurno()"
+      (turnoChanged)="turnoActivo.set($event)" />
   }
 
 </div>

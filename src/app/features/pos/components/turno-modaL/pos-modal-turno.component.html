@@ -1,0 +1,272 @@
+ <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-[#181818] border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-white">
+
+        <!-- Header -->
+        <div class="px-5 py-4 border-b border-zinc-800 flex items-center justify-between bg-[#141414]">
+          <div class="flex items-center gap-2.5">
+            <span class="text-xl">💵</span>
+            <div>
+              <h2 class="font-bold text-base">Control de Turno y Corte de Caja</h2>
+              <p class="text-[11px] text-zinc-400">Fondo para cambio, movimientos y arqueo final</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            (click)="closed.emit()"
+            class="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold">
+            ✕
+          </button>
+        </div>
+
+        <div class="p-5 overflow-y-auto space-y-5 flex-1">
+          @if (errorMsg()) {
+            <div class="p-3 rounded-xl bg-red-950/70 border border-red-500/40 text-red-300 text-xs font-semibold">
+              {{ errorMsg() }}
+            </div>
+          }
+
+          @if (isLoading()) {
+            <div class="py-12 text-center text-zinc-400 text-sm">Cargando información de turno...</div>
+          } @else if (corteGenerado()) {
+
+            <!-- ==================== COMPROBANTE DE CORTE REALIZADO ==================== -->
+            <div class="bg-[#111111] border border-emerald-500/40 rounded-2xl p-5 space-y-4">
+              <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <div>
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/30">
+                    TURNO CERRADO
+                  </span>
+                  <h3 class="font-bold text-lg mt-1">Resumen de Corte de Caja</h3>
+                  <p class="text-xs text-zinc-400">Responsable: {{ corteGenerado()!.usuario?.nombre }}</p>
+                </div>
+                <button
+                  type="button"
+                  (click)="imprimirCorte()"
+                  class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-xs font-bold">
+                  🖨️ Imprimir Corte
+                </button>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                <div class="bg-[#181818] p-3 rounded-xl border border-zinc-800">
+                  <div class="text-zinc-400">Fondo Inicial</div>
+                  <div class="font-mono font-bold text-sm mt-0.5">{{ corteGenerado()!.fondoInicial | currency:'MXN':'symbol-narrow' }}</div>
+                </div>
+                <div class="bg-[#181818] p-3 rounded-xl border border-zinc-800">
+                  <div class="text-zinc-400">Ventas Efectivo</div>
+                  <div class="font-mono font-bold text-sm text-emerald-400 mt-0.5">{{ corteGenerado()!.ventasEfectivo | currency:'MXN':'symbol-narrow' }}</div>
+                </div>
+                <div class="bg-[#181818] p-3 rounded-xl border border-zinc-800">
+                  <div class="text-zinc-400">Ventas Tarjeta/Transf.</div>
+                  <div class="font-mono font-bold text-sm text-sky-400 mt-0.5">{{ (corteGenerado()!.ventasTarjeta + corteGenerado()!.ventasTransferencia) | currency:'MXN':'symbol-narrow' }}</div>
+                </div>
+              </div>
+
+              <div class="bg-[#181818] rounded-xl p-4 border border-zinc-800 space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-zinc-400">Efectivo esperado en gaveta:</span>
+                  <span class="font-mono font-bold">{{ corteGenerado()!.efectivoEnGavetaEsperado | currency:'MXN':'symbol-narrow' }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-zinc-400">Efectivo contado físico:</span>
+                  <span class="font-mono font-bold text-white">{{ corteGenerado()!.efectivoContado | currency:'MXN':'symbol-narrow' }}</span>
+                </div>
+                <div class="flex justify-between pt-2 border-t border-zinc-800 font-bold">
+                  <span>Diferencia (Arqueo):</span>
+                  <span
+                    class="font-mono"
+                    [ngClass]="corteGenerado()!.diferencia === 0 ? 'text-emerald-400' : corteGenerado()!.diferencia > 0 ? 'text-sky-400' : 'text-red-400'">
+                    {{ corteGenerado()!.diferencia > 0 ? '+' : '' }}{{ corteGenerado()!.diferencia | currency:'MXN':'symbol-narrow' }}
+                    ({{ corteGenerado()!.diferencia === 0 ? 'Cuadrado' : corteGenerado()!.diferencia > 0 ? 'Sobrante' : 'Faltante' }})
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          } @else if (!turno()) {
+
+            <!-- ==================== APERTURA DE TURNO ==================== -->
+            <div class="bg-[#111111] border border-zinc-800 rounded-2xl p-5 space-y-4">
+              <div>
+                <h3 class="font-bold text-base">No tienes un turno abierto</h3>
+                <p class="text-xs text-zinc-400 mt-0.5">
+                  Registra el fondo inicial para cambio en tu gaveta para comenzar a registrar cobros.
+                </p>
+              </div>
+
+              <div class="space-y-1.5">
+                <label class="text-xs font-bold text-zinc-300">Fondo Inicial para Cambio (MXN)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="50"
+                  [(ngModel)]="fondoInicialInput"
+                  placeholder="Ej. 500"
+                  class="w-full bg-[#181818] border border-zinc-700 rounded-xl px-4 py-3 font-mono text-lg font-bold text-white focus:outline-none focus:border-emerald-500" />
+              </div>
+
+              <button
+                type="button"
+                (click)="abrirTurno()"
+                [disabled]="isSubmitting()"
+                class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 font-bold text-sm text-white transition-all">
+                {{ isSubmitting() ? 'Abriendo turno...' : '✅ Abrir Turno con este Fondo' }}
+              </button>
+            </div>
+
+          } @else if (turno()) {
+
+            <!-- ==================== TURNO ACTIVO ==================== -->
+            <!-- Navegación interna -->
+            <div class="flex bg-[#111111] p-1 rounded-xl border border-zinc-800 text-xs font-bold">
+              <button
+                type="button"
+                (click)="tab.set('resumen')"
+                class="flex-1 py-2 rounded-lg transition-all"
+                [ngClass]="tab() === 'resumen' ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'">
+                📊 Resumen y Movimientos
+              </button>
+              <button
+                type="button"
+                (click)="tab.set('corte')"
+                class="flex-1 py-2 rounded-lg transition-all"
+                [ngClass]="tab() === 'corte' ? 'bg-[#ab2424] text-white' : 'text-zinc-400 hover:text-white'">
+                🔒 Arqueo y Corte Final
+              </button>
+            </div>
+
+            @if (tab() === 'resumen') {
+              <!-- Tarjetas de estado en vivo -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3">
+                  <div class="text-[11px] text-zinc-400">Fondo Cambio</div>
+                  <div class="font-mono font-black text-base text-white mt-0.5">
+                    {{ turno()!.fondoInicial | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                  </div>
+                </div>
+                <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3">
+                  <div class="text-[11px] text-zinc-400">Cobrado Efectivo</div>
+                  <div class="font-mono font-black text-base text-emerald-400 mt-0.5">
+                    {{ turno()!.ventasEfectivo | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                  </div>
+                </div>
+                <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3">
+                  <div class="text-[11px] text-zinc-400">Tarjeta / Transf.</div>
+                  <div class="font-mono font-black text-base text-sky-400 mt-0.5">
+                    {{ (turno()!.ventasTarjeta + turno()!.ventasTransferencia) | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                  </div>
+                </div>
+                <div class="bg-[#111111] border border-emerald-500/40 rounded-xl p-3">
+                  <div class="text-[11px] text-emerald-300 font-semibold">Esperado Gaveta</div>
+                  <div class="font-mono font-black text-base text-emerald-400 mt-0.5">
+                    {{ turno()!.efectivoEnGavetaEsperado | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Registrar Retiro / Gasto / Ingreso -->
+              <div class="bg-[#111111] border border-zinc-800 rounded-xl p-4 space-y-3">
+                <h4 class="font-bold text-xs uppercase tracking-wider text-zinc-300">Registrar Movimiento de Efectivo</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <select
+                    [(ngModel)]="movTipo"
+                    class="bg-[#181818] border border-zinc-700 rounded-xl px-3 py-2 text-xs font-semibold text-white">
+                    <option value="RETIRO">⬇️ Retiro parcial</option>
+                    <option value="GASTO">🧾 Gasto menor</option>
+                    <option value="INGRESO_FONDO">⬆️ Ingreso cambio</option>
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    [(ngModel)]="movMonto"
+                    placeholder="Monto $"
+                    class="bg-[#181818] border border-zinc-700 rounded-xl px-3 py-2 font-mono text-xs text-white" />
+                  <input
+                    type="text"
+                    [(ngModel)]="movConcepto"
+                    placeholder="Concepto (ej. Hielo, Corte parcial)"
+                    class="bg-[#181818] border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white" />
+                </div>
+                <button
+                  type="button"
+                  (click)="registrarMovimiento()"
+                  [disabled]="isSubmitting()"
+                  class="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-white">
+                  + Guardar Movimiento
+                </button>
+              </div>
+
+              <!-- Historial de movimientos -->
+              @if (turno()!.movimientos?.length > 0) {
+                <div class="space-y-1.5">
+                  <h4 class="text-xs font-bold text-zinc-400">Movimientos del Turno</h4>
+                  @for (m of turno()!.movimientos; track m.id) {
+                    <div class="flex items-center justify-between text-xs bg-[#111111] px-3 py-2 rounded-lg border border-zinc-800">
+                      <div>
+                        <span class="font-bold text-zinc-200">{{ m.concepto }}</span>
+                        <span class="text-[10px] text-zinc-500 ml-2">{{ m.creadoEn | date:'HH:mm' }}</span>
+                      </div>
+                      <span
+                        class="font-mono font-bold"
+                        [ngClass]="m.tipo === 'INGRESO_FONDO' ? 'text-emerald-400' : 'text-red-400'">
+                        {{ m.tipo === 'INGRESO_FONDO' ? '+' : '-' }}{{ m.monto | currency:'MXN':'symbol-narrow' }}
+                      </span>
+                    </div>
+                  }
+                </div>
+              }
+            } @else {
+              <!-- ==================== ARQUEO FINAL ==================== -->
+              <div class="bg-[#111111] border border-zinc-800 rounded-2xl p-4 space-y-4">
+                <div class="flex items-center justify-between text-sm border-b border-zinc-800 pb-3">
+                  <span class="text-zinc-400">Efectivo esperado en gaveta (Sistema):</span>
+                  <span class="font-mono font-black text-lg text-emerald-400">
+                    {{ turno()!.efectivoEnGavetaEsperado | currency:'MXN':'symbol-narrow' }}
+                  </span>
+                </div>
+
+                <div class="space-y-1.5">
+                  <label class="text-xs font-bold text-zinc-300">Efectivo Físico Contado en Gaveta (MXN)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    [(ngModel)]="efectivoContadoInput"
+                    placeholder="Cuenta billetes y monedas e ingresa el total"
+                    class="w-full bg-[#181818] border border-zinc-700 rounded-xl px-4 py-3 font-mono text-xl font-black text-white focus:outline-none focus:border-amber-500" />
+                </div>
+
+                @if (efectivoContadoInput !== null && efectivoContadoInput >= 0) {
+                  <div class="p-3 rounded-xl bg-[#181818] border border-zinc-800 flex items-center justify-between text-xs">
+                    <span class="text-zinc-400">Diferencia preliminar:</span>
+                    <span
+                      class="font-mono font-black text-sm"
+                      [ngClass]="diferenciaPreliminar() === 0 ? 'text-emerald-400' : diferenciaPreliminar() > 0 ? 'text-sky-400' : 'text-red-400'">
+                      {{ diferenciaPreliminar() > 0 ? '+' : '' }}{{ diferenciaPreliminar() | currency:'MXN':'symbol-narrow' }}
+                    </span>
+                  </div>
+                }
+
+                <div class="space-y-1.5">
+                  <label class="text-xs font-bold text-zinc-300">Observaciones de cierre (Opcional)</label>
+                  <input
+                    type="text"
+                    [(ngModel)]="notasCierreInput"
+                    placeholder="Notas sobre sobrantes, faltantes o incidencias"
+                    class="w-full bg-[#181818] border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white" />
+                </div>
+
+                <button
+                  type="button"
+                  (click)="cerrarTurno()"
+                  [disabled]="isSubmitting() || efectivoContadoInput === null"
+                  class="w-full py-3 rounded-xl bg-[#ab2424] hover:bg-red-600 disabled:opacity-50 font-bold text-sm text-white transition-all">
+                  {{ isSubmitting() ? 'Cerrando turno...' : '🔒 Cerrar Turno y Ejecutar Corte de Caja' }}
+                </button>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </div>
+  

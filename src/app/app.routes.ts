@@ -7,6 +7,7 @@ import { StaffManagementComponent } from './features/admin/components/Staff/staf
 import { authGuard, publicGuard } from './core/guards/auth.guard';
 import { MenuManagementComponent } from './features/admin/components/menu/menu-management.component';
 import { InventoryManagementComponent } from './features/admin/components/inventario/inventory-management.component';
+import { AdminCajaComponent } from './features/admin/components/caja/admin-caja.component';
 import { TableManagementComponent } from './features/admin/components/mesas/table-management.component';
 
 export const routes: Routes = [
@@ -44,6 +45,7 @@ export const routes: Routes = [
       { path: 'menu', component: MenuManagementComponent },
       { path: 'inventory', component: InventoryManagementComponent },
       { path: 'tables',component: TableManagementComponent},
+      { path: 'caja', component: AdminCajaComponent },
     ]
   },
 

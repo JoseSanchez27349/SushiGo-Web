@@ -23,4 +23,14 @@ export class KitchenService {
       { estadoCocina }
     );
   }
+
+  cambiarEstadoItem(
+    itemId: string,
+    estadoCocina: EstadoCocina
+  ): Observable<{ message: string; ordenCompletaLista: boolean }> {
+    return this.http.put<{ message: string; ordenCompletaLista: boolean }>(
+      `${this.apiUrl}/items/${itemId}/estado`,
+      { estadoCocina }
+    );
+  }
 }

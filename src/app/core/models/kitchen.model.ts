@@ -9,6 +9,20 @@ export interface ContadorEnVivo {
   nivelAlerta: NivelAlertaCocina;
 }
 
+export interface KitchenOrderItem {
+  id: string;
+  cantidad: number;
+  estadoCocina: EstadoCocina;
+  ronda: number;
+  creadoEn?: string;
+  inicioPreparacionEn?: string | null;
+  listoEn?: string | null;
+  producto: {
+    id?: string;
+    nombre: string;
+  };
+}
+
 export interface KitchenComanda {
   id: string;
   ordenId: string;
@@ -28,18 +42,12 @@ export interface KitchenComanda {
     folio: string | number;
     tipoOrden: 'comedor' | 'llevar' | string;
     notas?: string | null;
+    creadoEn?: string;
     mesa?: {
       id: number;
       numeroMesa: string;
     } | null;
-    detalles: {
-      id?: string;
-      cantidad: number;
-      producto: {
-        id?: string;
-        nombre: string;
-      };
-    }[];
+    detalles: KitchenOrderItem[];
   };
   contadorEnVivo: ContadorEnVivo;
 }

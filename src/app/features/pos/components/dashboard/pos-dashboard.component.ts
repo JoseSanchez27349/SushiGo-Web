@@ -1,97 +1,253 @@
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
-import { MenuService } from '../../../../core/services/menu.service';
-import { OrderService } from '../../../../core/services/order.service';
-import { PaymentService } from '../../../../core/services/payment.service';
-import { Category, Product } from '../../../../core/models/menu.model';
-import { ActiveOrder, CreateOrderPayload, Mesa } from '../../../../core/models/order.model';
-import {
-  MetodoPago,
-  PagoItemPayload,
-  RegistrarPagoResponse,
-  TipoTicketReimpresion
-} from '../../../../core/models/payment.model';
+import { RealtimeService } from '../../../../core/services/realtime.service';
+import { PosTurnoModalComponent } from '../turno-modaL/pos-turno-modal.component';
 
-export interface PosCartItem {
-  product: Product;
+export interface PosCategory {
+  id: number | string;
+  nombre: string;
+  activa?: boolean;
+}
+
+export interface PosProduct {
+  id: string;
+  nombre: string;
+  descripcion?: string | null;
+  precio: number | string;
+  urlImagen?: string | null;
+  estaDisponible: boolean;
+  disponibleParaVenta?: boolean;
+  porcionesDisponibles?: number | null;
+  categoriaId?: number | string;
+  categoria: {
+    id?: number | string;
+    nombre: string;
+  };
+}
+
+export interface PosTable {
+  id: number | string;
+  nombre?: string;
+  numero?: number;
+  estado: 'disponible' | 'ocupada' | 'reservada' | 'mantenimiento' | string;
+  capacidad?: number;
+}
+
+export interface CartItem {
+  product: PosProduct;
   cantidad: number;
   notas: string;
 }
 
-export type EstadoCocinaPos = 'sin_iniciar' | 'en_preparacion' | 'listo';
-export type FiltroOrdenesPos = 'todas' | EstadoCocinaPos;
+export interface ActiveOrderDetail {
+  id?: string;
+  cantidad: number;
+  precioUnitario?: number | string;
+  subtotal: number | string;
+  notas?: string | null;
+  estadoCocina?: string;
+  producto: {
+    id?: string;
+    nombre: string;
+  };
+}
+
+export interface ActiveOrder {
+  id: string;
+  folio?: number | string;
+  tipoOrden: 'comedor' | 'llevar' | string;
+  estado: string;
+  estadoCocina?: string;
+  total: number | string;
+  notas?: string | null;
+  creadoEn?: string;
+  createdAt?: string;
+  mesaId?: string | number | null;
+  mesa?: PosTable | null;
+  detalles: ActiveOrderDetail[];
+}
+
+export interface PagoDraft {
+  metodoPago: 'efectivo' | 'tarjeta' | 'transferencia' | string;
+  monto: number;
+  idTransaccion: string;
+}
+
+export interface PaymentReceipt {
+  message: string;
+  folio: string | number;
+  totalOrden: number;
+  montoAbonado: number;
+  cambio: number;
+  puntosAcumulados: number;
+}
 
 @Component({
   selector: 'app-pos-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
-  templateUrl: './pos-dashboard.component.html'
+  imports: [CommonModule, FormsModule, RouterLink, PosTurnoModalComponent],
+  templateUrl: './pos-dashboard.component.html',
 })
 export class PosDashboardComponent implements OnInit, OnDestroy {
-  private authService = inject(AuthService);
-  private menuService = inject(MenuService);
-  private orderService = inject(OrderService);
-  private paymentService = inject(PaymentService);
+  private http = inject(HttpClient);
   private router = inject(Router);
+  private authService = inject(AuthService);
+  private realtimeService = inject(RealtimeService);
 
-  user = this.authService.currentUser;
-  isAdmin = computed(() => this.user()?.role?.toUpperCase() === 'ADMIN');
+  private baseApi = 'http://localhost:3000/api/v1';
+  private sub = new Subscription();
+  private timerInterval: any = null;
 
-  // Catálogo, Mesas y Órdenes Activas
-  categorias = signal<Category[]>([]);
-  productos = signal<Product[]>([]);
-  mesas = signal<Mesa[]>([]);
-  ordenesActivas = signal<ActiveOrder[]>([]);
+  // Reloj reactivo para cronómetros de órdenes en vivo
+  nowTick = signal<number>(Date.now());
 
-  selectedCategoryId = signal<number | null>(null);
-  searchQuery = signal<string>('');
-
-  // Estados UI
+  // Estado de conexión y usuario
+  socketConnected = signal<boolean>(true);
+  soundEnabled = signal<boolean>(true);
   isLoading = signal<boolean>(true);
   isSubmitting = signal<boolean>(false);
+
+  // Control de Turno y Caja
+  isTurnoModalOpen = signal<boolean>(false);
+  turnoActivo = signal<any | null>(null);
+
+  // Catálogo y mesas
+  categorias = signal<PosCategory[]>([]);
+  productos = signal<PosProduct[]>([]);
+  mesas = signal<PosTable[]>([]);
+  selectedCategoryId = signal<number | string | null>(null);
+  searchQuery = signal<string>('');
+
+  // Comanda actual
+  tipoOrden = signal<'comedor' | 'llevar'>('comedor');
+  selectedMesaId = signal<number | string | null>(null);
+  cart = signal<CartItem[]>([]);
+  ordenNotas = signal<string>('');
+  appendTargetOrder = signal<ActiveOrder | null>(null);
+
+  // Órdenes activas / Cuentas abiertas
+  ordenesActivas = signal<ActiveOrder[]>([]);
   isOrdersModalOpen = signal<boolean>(false);
-  ordersFilter = signal<FiltroOrdenesPos>('todas');
+  ordersFilter = signal<'todas' | 'sin_iniciar' | 'en_preparacion' | 'listo'>('todas');
+
+  // Cancelación de orden
+  cancelTargetOrder = signal<ActiveOrder | null>(null);
+  cancelMotivo = signal<string>('');
+  isCancelingOrder = signal<boolean>(false);
+
+  // Cobro / Caja
+  checkoutOrder = signal<ActiveOrder | null>(null);
+  pagosDraft = signal<PagoDraft[]>([]);
+  isProcessingPayment = signal<boolean>(false);
+  paymentReceipt = signal<PaymentReceipt | null>(null);
+  lastPaidOrderId = signal<string | null>(null);
+
+  // Notificaciones flotantes
   feedbackMessage = signal<string>('');
   feedbackType = signal<'success' | 'warning' | 'error'>('success');
+  private feedbackTimeout: any = null;
 
-  // Control de polling y alertas de cocina
-  private pollingIntervalId: ReturnType<typeof setInterval> | null = null;
-  private previousOrderStates = new Map<string, EstadoCocinaPos>();
-  private initialOrdersLoaded = false;
+  // Usuario autenticado
+  user = computed(() => {
+    const authUser =
+      (this.authService as any).currentUser?.() ||
+      (this.authService as any).user?.();
+    if (authUser) return authUser;
+    try {
+      const raw = sessionStorage.getItem('user');
+      return raw ? JSON.parse(raw) : { nombre: 'Mesero', role: 'Mesero' };
+    } catch {
+      return { nombre: 'Mesero', role: 'Mesero' };
+    }
+  });
 
-  // Datos de la Comanda actual
-  tipoOrden = signal<'comedor' | 'llevar'>('comedor');
-  selectedMesaId = signal<number | null>(null);
-  cart = signal<PosCartItem[]>([]);
-  ordenNotas = signal<string>('');
+  isAdmin = computed(() => {
+    const u = this.user();
+    const role = String(u?.role || u?.rol || '').toLowerCase();
+    return role === 'admin' || role === 'administrador' || role === 'gerente';
+  });
 
-  // ==================== ESTADOS DE COBRO / CAJA ====================
-  checkoutOrder = signal<ActiveOrder | null>(null);
-  pagosDraft = signal<PagoItemPayload[]>([]);
-  isProcessingPayment = signal<boolean>(false);
-  paymentReceipt = signal<RegistrarPagoResponse | null>(null);
-  lastPaidOrderId = signal<string | number | null>(null);
+  activeCategorias = computed(() =>
+    this.categorias().filter((c) => c.activa !== false),
+  );
 
-  // Clasificación de órdenes por estado de cocina
+  filteredProductos = computed(() => {
+    const catId = this.selectedCategoryId();
+    const query = this.searchQuery().trim().toLowerCase();
+
+    return this.productos().filter((p) => {
+      const matchesCat =
+        catId === null ||
+        String(p.categoriaId ?? p.categoria?.id) === String(catId);
+      const matchesQuery =
+        !query ||
+        p.nombre.toLowerCase().includes(query) ||
+        (p.descripcion && p.descripcion.toLowerCase().includes(query)) ||
+        p.categoria?.nombre?.toLowerCase().includes(query);
+      return matchesCat && matchesQuery;
+    });
+  });
+
+  cartQuantityMap = computed(() => {
+    const map: Record<string, number> = {};
+    for (const item of this.cart()) {
+      map[item.product.id] = (map[item.product.id] || 0) + item.cantidad;
+    }
+    return map;
+  });
+
+  totalArticulos = computed(() =>
+    this.cart().reduce((acc, item) => acc + item.cantidad, 0),
+  );
+
+  totalComanda = computed(() =>
+    Number(
+      this.cart()
+        .reduce((acc, item) => acc + Number(item.product.precio) * item.cantidad, 0)
+        .toFixed(2),
+    ),
+  );
+
+  activeOrderForSelectedMesa = computed(() => {
+    if (this.tipoOrden() !== 'comedor' || !this.selectedMesaId()) return null;
+    return (
+      this.ordenesActivas().find(
+        (o) =>
+          String(o.mesaId ?? o.mesa?.id) === String(this.selectedMesaId()) &&
+          o.estado !== 'pagado' &&
+          o.estado !== 'cancelado',
+      ) || null
+    );
+  });
+
   ordenesSinIniciar = computed(() =>
-    this.ordenesActivas().filter(ord => this.getEstadoCocinaNormalizado(ord) === 'sin_iniciar')
+    this.ordenesActivas().filter(
+      (o) => this.getEstadoCocinaNormalizado(o) === 'sin_iniciar',
+    ),
   );
 
   ordenesEnPreparacion = computed(() =>
-    this.ordenesActivas().filter(ord => this.getEstadoCocinaNormalizado(ord) === 'en_preparacion')
+    this.ordenesActivas().filter(
+      (o) => this.getEstadoCocinaNormalizado(o) === 'en_preparacion',
+    ),
   );
 
   ordenesListas = computed(() =>
-    this.ordenesActivas().filter(ord => this.getEstadoCocinaNormalizado(ord) === 'listo')
+    this.ordenesActivas().filter(
+      (o) => this.getEstadoCocinaNormalizado(o) === 'listo',
+    ),
   );
 
   filteredOrdenesActivas = computed(() => {
-    const filtro = this.ordersFilter();
-    if (filtro === 'todas') return this.ordenesActivas();
-    return this.ordenesActivas().filter(ord => this.getEstadoCocinaNormalizado(ord) === filtro);
+    const filter = this.ordersFilter();
+    const list = this.ordenesActivas();
+    if (filter === 'todas') return list;
+    return list.filter((o) => this.getEstadoCocinaNormalizado(o) === filter);
   });
 
   totalCheckout = computed(() => Number(this.checkoutOrder()?.total || 0));
@@ -99,221 +255,234 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
   totalAbonadoCheckout = computed(() =>
     Number(
       this.pagosDraft()
-        .reduce((acc, p) => acc + (Number(p.monto) || 0), 0)
-        .toFixed(2)
-    )
+        .reduce((acc, p) => acc + Number(p.monto || 0), 0)
+        .toFixed(2),
+    ),
   );
 
-  restanteCheckout = computed(() =>
-    Math.max(0, Number((this.totalCheckout() - this.totalAbonadoCheckout()).toFixed(2)))
-  );
-
-  cambioCheckout = computed(() =>
-    Math.max(0, Number((this.totalAbonadoCheckout() - this.totalCheckout()).toFixed(2)))
-  );
-
-  // Solo categorías activas
-  activeCategorias = computed(() =>
-    this.categorias().filter(c => c.estaActiva)
-  );
-
-  // Filtro combinado por categoría y búsqueda
-  filteredProductos = computed(() => {
-    const catId = this.selectedCategoryId();
-    const query = this.searchQuery().trim().toLowerCase();
-
-    return this.productos().filter(prod => {
-      const matchesCat = catId === null || prod.categoriaId === catId;
-      const matchesQuery =
-        !query ||
-        prod.nombre.toLowerCase().includes(query) ||
-        (prod.descripcion && prod.descripcion.toLowerCase().includes(query));
-      return matchesCat && matchesQuery;
-    });
+  restanteCheckout = computed(() => {
+    const diff = Number((this.totalCheckout() - this.totalAbonadoCheckout()).toFixed(2));
+    return diff > 0.01 ? diff : 0;
   });
 
-  // Mapa rápido de cantidades en el carrito por productoId
-  cartQuantityMap = computed(() => {
-    const map: Record<string, number> = {};
-    for (const item of this.cart()) {
-      map[item.product.id] = item.cantidad;
-    }
-    return map;
+  cambioCheckout = computed(() => {
+    const diff = Number((this.totalAbonadoCheckout() - this.totalCheckout()).toFixed(2));
+    return diff > 0 ? diff : 0;
   });
-
-  // Totales de la comanda
-  totalArticulos = computed(() =>
-    this.cart().reduce((acc, item) => acc + item.cantidad, 0)
-  );
-
-  totalComanda = computed(() =>
-    this.cart().reduce((acc, item) => acc + Number(item.product.precio) * item.cantidad, 0)
-  );
 
   ngOnInit(): void {
     this.refreshAll();
+    this.loadMiTurno();
+    this.setupRealtime();
 
-    // Sincronizar estados de cocina cada 10 segundos
-    this.pollingIntervalId = setInterval(() => {
-      this.loadOrdenesActivas();
-      this.loadMesas();
-    }, 10_000);
+    this.timerInterval = setInterval(() => {
+      this.nowTick.set(Date.now());
+    }, 15000);
   }
 
   ngOnDestroy(): void {
-    if (this.pollingIntervalId) {
-      clearInterval(this.pollingIntervalId);
+    this.sub.unsubscribe();
+    if (this.timerInterval) clearInterval(this.timerInterval);
+    if (this.feedbackTimeout) clearTimeout(this.feedbackTimeout);
+  }
+
+  private setupRealtime(): void {
+    const rt = this.realtimeService as any;
+
+    if (rt.socket) {
+      this.socketConnected.set(Boolean(rt.socket.connected));
+      rt.socket.on('connect', () => this.socketConnected.set(true));
+      rt.socket.on('disconnect', () => this.socketConnected.set(false));
+    }
+
+    if (typeof rt.onOrdenActualizada === 'function') {
+      this.sub.add(
+        rt.onOrdenActualizada().subscribe((payload: any) => {
+          this.loadOrdenesActivas();
+          this.loadMesas();
+          if (payload?.ordenCompletaLista && this.soundEnabled()) {
+            this.playNotificationBeep();
+          }
+        }),
+      );
+    }
+
+    if (typeof rt.onNuevaOrden === 'function') {
+      this.sub.add(
+        rt.onNuevaOrden().subscribe(() => {
+          this.loadOrdenesActivas();
+          this.loadMesas();
+        }),
+      );
+    }
+
+    if (typeof rt.onInventarioActualizado === 'function') {
+      this.sub.add(rt.onInventarioActualizado().subscribe(() => this.loadMenu()));
+    }
+
+    if (typeof rt.onCajaActualizada === 'function') {
+      this.sub.add(rt.onCajaActualizada().subscribe(() => this.loadMiTurno()));
     }
   }
 
   refreshAll(): void {
-    this.loadCatalogo();
+    this.loadMenu();
     this.loadMesas();
     this.loadOrdenesActivas();
   }
 
-  loadCatalogo(): void {
-    this.isLoading.set(true);
-    this.menuService.getCategorias().subscribe({
-      next: (res) => {
-        this.categorias.set(res.categorias);
-        this.loadProductos();
-      },
-      error: () => {
-        this.showFeedback('No se pudieron cargar las categorías', 'error');
-        this.isLoading.set(false);
-      }
-    });
+  loadMiTurno(): void {
+    this.http
+      .get<{ turno: any }>(`${this.baseApi}/turnos/mi-turno`)
+      .subscribe({
+        next: (res) => this.turnoActivo.set(res.turno),
+        error: () => this.turnoActivo.set(null),
+      });
   }
 
-  loadProductos(): void {
-    this.menuService.getProductos().subscribe({
+  loadMenu(): void {
+    this.isLoading.set(true);
+
+    this.http.get<any>(`${this.baseApi}/categorias`).subscribe({
       next: (res) => {
-        this.productos.set(res.productos);
+        const list = Array.isArray(res)
+          ? res
+          : res?.categorias || res?.categories || res?.data || [];
+        this.categorias.set(list);
+      },
+      error: (err) => console.error('Error al cargar categorías:', err),
+    });
+
+    this.http.get<any>(`${this.baseApi}/productos`).subscribe({
+      next: (res) => {
+        const list = Array.isArray(res)
+          ? res
+          : res?.productos || res?.products || res?.data || [];
+        this.productos.set(list);
         this.isLoading.set(false);
       },
       error: () => {
-        this.showFeedback('No se pudieron cargar los productos del menú', 'error');
         this.isLoading.set(false);
-      }
+        this.showFeedback('No se pudo cargar el menú', 'error');
+      },
     });
   }
 
   loadMesas(): void {
-    this.orderService.getMesas().subscribe({
-      next: (res) => this.mesas.set(res.mesas || []),
-      error: () => console.warn('No se pudieron cargar las mesas')
+    this.http.get<any>(`${this.baseApi}/mesas`).subscribe({
+      next: (res) => {
+        const list = Array.isArray(res)
+          ? res
+          : res?.mesas || res?.tables || res?.data || [];
+        this.mesas.set(list);
+      },
+      error: (err) => console.error('Error al cargar mesas:', err),
     });
   }
 
   loadOrdenesActivas(): void {
-    this.orderService.getOrdenesActivas().subscribe({
+    this.http.get<any>(`${this.baseApi}/ordenes/activas`).subscribe({
       next: (res) => {
-        const ordenes = res.ordenes || [];
-        this.detectarCambiosEstadoCocina(ordenes);
-        this.ordenesActivas.set(ordenes);
+        const list = Array.isArray(res)
+          ? res
+          : res?.ordenes || res?.orders || res?.data || [];
+        this.ordenesActivas.set(list);
       },
-      error: () => console.warn('No se pudieron cargar las órdenes activas')
+      error: () => {
+        this.http.get<any>(`${this.baseApi}/ordenes`).subscribe({
+          next: (res) => {
+            const raw = Array.isArray(res)
+              ? res
+              : res?.ordenes || res?.orders || res?.data || [];
+            this.ordenesActivas.set(
+              raw.filter(
+                (o: ActiveOrder) =>
+                  o.estado !== 'pagado' && o.estado !== 'cancelado',
+              ),
+            );
+          },
+        });
+      },
     });
   }
 
-  private detectarCambiosEstadoCocina(ordenes: ActiveOrder[]): void {
-    const mapaActual = new Map<string, EstadoCocinaPos>();
+  // ==================== GESTIÓN DE COMANDA ====================
 
-    for (const orden of ordenes) {
-      mapaActual.set(String(orden.id), this.getEstadoCocinaNormalizado(orden));
+  isProductAvailable(prod: PosProduct): boolean {
+    if (!prod.estaDisponible) return false;
+    if (prod.disponibleParaVenta === false) return false;
+    if (
+      prod.porcionesDisponibles !== null &&
+      prod.porcionesDisponibles !== undefined &&
+      prod.porcionesDisponibles <= 0
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  addToCart(prod: PosProduct): void {
+    if (!this.isProductAvailable(prod)) {
+      this.showFeedback(`"${prod.nombre}" no tiene disponibilidad`, 'warning');
+      return;
     }
 
-    if (this.initialOrdersLoaded) {
-      const recienListas: ActiveOrder[] = [];
-      const recienIniciadas: ActiveOrder[] = [];
+    const current = this.cart();
+    const existingIndex = current.findIndex((i) => i.product.id === prod.id);
 
-      for (const orden of ordenes) {
-        const id = String(orden.id);
-        const estadoAnterior = this.previousOrderStates.get(id);
-        const estadoActual = mapaActual.get(id);
-
-        if (estadoAnterior && estadoAnterior !== estadoActual) {
-          if (estadoActual === 'listo') {
-            recienListas.push(orden);
-          } else if (estadoActual === 'en_preparacion') {
-            recienIniciadas.push(orden);
-          }
-        }
+    if (existingIndex >= 0) {
+      const currentQty = current[existingIndex].cantidad;
+      if (
+        prod.porcionesDisponibles !== null &&
+        prod.porcionesDisponibles !== undefined &&
+        currentQty + 1 > prod.porcionesDisponibles
+      ) {
+        this.showFeedback(
+          `Solo quedan ${prod.porcionesDisponibles} porciones de ${prod.nombre}`,
+          'warning',
+        );
+        return;
       }
 
-      if (recienListas.length > 0) {
-        const primera = recienListas[0];
-        const destino = primera.mesa ? this.getMesaLabel(primera.mesa) : 'Para Llevar';
-        const extra = recienListas.length > 1 ? ` (+${recienListas.length - 1} más)` : '';
-        this.showFeedback(
-          `🔔 ¡Pedido listo en cocina! ${this.formatFolio(primera)} (${destino})${extra}`,
-          'success'
-        );
-        this.reproducirAvisoSonoro();
-      } else if (recienIniciadas.length > 0) {
-        const primera = recienIniciadas[0];
-        const destino = primera.mesa ? this.getMesaLabel(primera.mesa) : 'Para Llevar';
-        this.showFeedback(
-          `🔥 Cocina inició preparación: ${this.formatFolio(primera)} (${destino})`,
-          'warning'
-        );
-      }
-    }
-
-    this.previousOrderStates = mapaActual;
-    this.initialOrdersLoaded = true;
-  }
-
-  private reproducirAvisoSonoro(): void {
-    try {
-      const AudioCtx =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.35);
-    } catch {
-      // Ignorar si el navegador bloquea audio automático
+      const updated = [...current];
+      updated[existingIndex] = {
+        ...updated[existingIndex],
+        cantidad: currentQty + 1,
+      };
+      this.cart.set(updated);
+    } else {
+      this.cart.set([...current, { product: prod, cantidad: 1, notas: '' }]);
     }
   }
 
-  getEstadoCocinaNormalizado(orden: ActiveOrder): EstadoCocinaPos {
-    const estado = (orden.estado || '').toLowerCase().trim();
-    if (estado === 'preparado' || estado === 'listo') return 'listo';
-    if (estado === 'en_preparacion') return 'en_preparacion';
-    return 'sin_iniciar';
+  incrementItem(item: CartItem): void {
+    this.addToCart(item.product);
   }
 
-  isOrdenListaParaCobrar(orden: ActiveOrder): boolean {
-    return this.getEstadoCocinaNormalizado(orden) === 'listo';
+  decrementItem(item: CartItem): void {
+    const current = this.cart();
+    if (item.cantidad <= 1) {
+      this.cart.set(current.filter((i) => i.product.id !== item.product.id));
+    } else {
+      this.cart.set(
+        current.map((i) =>
+          i.product.id === item.product.id
+            ? { ...i, cantidad: i.cantidad - 1 }
+            : i,
+        ),
+      );
+    }
   }
 
-  getEstadoOrdenLabel(orden: ActiveOrder): string {
-    const estado = this.getEstadoCocinaNormalizado(orden);
-    if (estado === 'listo') return '✅ Listo en Cocina';
-    if (estado === 'en_preparacion') return '🔥 En Preparación';
-    return '⏳ Sin Iniciar';
+  updateItemNotes(productId: string, notas: string): void {
+    this.cart.update((items) =>
+      items.map((i) => (i.product.id === productId ? { ...i, notas } : i)),
+    );
   }
 
-  formatFolio(orden: ActiveOrder): string {
-    const val = String(orden.folio || orden.id).trim();
-    return val.startsWith('#') ? val : `#${val}`;
-  }
-
-  openOrdersModal(filtro: FiltroOrdenesPos = 'todas'): void {
-    this.ordersFilter.set(filtro);
-    this.isOrdersModalOpen.set(true);
-    this.loadOrdenesActivas();
+  clearCart(): void {
+    this.cart.set([]);
+    this.ordenNotas.set('');
   }
 
   setTipoOrden(tipo: 'comedor' | 'llevar'): void {
@@ -323,173 +492,227 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  selectMesa(mesa: Mesa): void {
-    if (mesa.estado === 'mantenimiento') {
-      this.showFeedback(`${this.getMesaLabel(mesa)} está en mantenimiento`, 'warning');
-      return;
-    }
+  selectMesa(mesa: PosTable): void {
+    if (mesa.estado === 'mantenimiento') return;
     this.selectedMesaId.set(mesa.id);
   }
 
-  getMesaLabel(mesa: Mesa): string {
-    const val = String(mesa.numeroMesa || mesa.id).trim();
-    return /^\d+$/.test(val) ? `Mesa ${val}` : val;
+  getMesaLabel(mesa: PosTable): string {
+    if (mesa.nombre) return mesa.nombre;
+    if (mesa.numero !== undefined && mesa.numero !== null) return `Mesa ${mesa.numero}`;
+    return 'Mesa';
   }
 
-  // ==================== LÓGICA DE CARRITO Y STOCK ====================
-
-  isProductAvailable(prod: Product): boolean {
-    return prod.estaDisponible && prod.disponibleParaVenta !== false;
-  }
-
-  addToCart(prod: Product): void {
-    if (!this.isProductAvailable(prod)) {
-      this.showFeedback(`"${prod.nombre}" no está disponible en este momento`, 'warning');
-      return;
-    }
-
-    const currentQty = this.cartQuantityMap()[prod.id] || 0;
-    const maxPorciones = prod.porcionesDisponibles;
-
-    if (maxPorciones !== null && maxPorciones !== undefined && currentQty + 1 > maxPorciones) {
-      this.showFeedback(
-        `Stock insuficiente: solo alcanzan ${maxPorciones} porciones de "${prod.nombre}"`,
-        'warning'
-      );
-      return;
-    }
-
-    if (currentQty > 0) {
-      this.cart.update(items =>
-        items.map(item =>
-          item.product.id === prod.id
-            ? { ...item, cantidad: item.cantidad + 1 }
-            : item
-        )
-      );
+  startAppendToOrder(ord: ActiveOrder): void {
+    this.appendTargetOrder.set(ord);
+    if (ord.mesaId || ord.mesa?.id) {
+      this.tipoOrden.set('comedor');
+      this.selectedMesaId.set(ord.mesaId ?? ord.mesa!.id);
     } else {
-      this.cart.update(items => [
-        ...items,
-        { product: prod, cantidad: 1, notas: '' }
-      ]);
+      this.tipoOrden.set('llevar');
+      this.selectedMesaId.set(null);
     }
+    this.isOrdersModalOpen.set(false);
+    this.showFeedback(`Agregando ronda a ${this.formatFolio(ord)}`, 'success');
   }
 
-  incrementItem(item: PosCartItem): void {
-    this.addToCart(item.product);
+  clearAppendTarget(): void {
+    this.appendTargetOrder.set(null);
   }
-
-  decrementItem(item: PosCartItem): void {
-    if (item.cantidad <= 1) {
-      this.removeItem(item.product.id);
-      return;
-    }
-
-    this.cart.update(items =>
-      items.map(i =>
-        i.product.id === item.product.id
-          ? { ...i, cantidad: i.cantidad - 1 }
-          : i
-      )
-    );
-  }
-
-  removeItem(productId: string): void {
-    this.cart.update(items => items.filter(i => i.product.id !== productId));
-  }
-
-  updateItemNotes(productId: string, notas: string): void {
-    this.cart.update(items =>
-      items.map(i =>
-        i.product.id === productId ? { ...i, notas } : i
-      )
-    );
-  }
-
-  clearCart(): void {
-    this.cart.set([]);
-    this.ordenNotas.set('');
-  }
-
-  // ==================== ENVIAR ORDEN AL BACKEND ====================
 
   submitOrden(): void {
     if (this.cart().length === 0 || this.isSubmitting()) return;
 
-    if (this.tipoOrden() === 'comedor' && !this.selectedMesaId()) {
-      this.showFeedback('Selecciona una mesa antes de enviar la comanda', 'warning');
+    if (
+      !this.appendTargetOrder() &&
+      this.tipoOrden() === 'comedor' &&
+      !this.selectedMesaId()
+    ) {
+      this.showFeedback('Selecciona una mesa para enviar la comanda', 'warning');
       return;
     }
 
-    const notasItems = this.cart()
-      .filter(i => i.notas.trim().length > 0)
-      .map(i => `${i.cantidad}x ${i.product.nombre}: ${i.notas.trim()}`);
-
-    const bloquesNotas: string[] = [];
-    if (notasItems.length > 0) {
-      bloquesNotas.push(notasItems.join(' | '));
-    }
-    if (this.ordenNotas().trim().length > 0) {
-      bloquesNotas.push(this.ordenNotas().trim());
-    }
-
-    const payload: CreateOrderPayload = {
-      tipoOrden: this.tipoOrden(),
-      mesaId: this.tipoOrden() === 'comedor' ? this.selectedMesaId() : null,
-      notas: bloquesNotas.length > 0 ? bloquesNotas.join(' — ') : undefined,
-      items: this.cart().map(i => ({
-        productoId: i.product.id,
-        cantidad: i.cantidad
-      }))
-    };
-
     this.isSubmitting.set(true);
 
-    this.orderService.createOrden(payload).subscribe({
-      next: (res) => {
+    const itemsPayload = this.cart().map((i) => ({
+      productoId: i.product.id,
+      cantidad: i.cantidad,
+      notas: i.notas.trim() || undefined,
+    }));
+
+    const target = this.appendTargetOrder();
+
+    if (target) {
+      this.http
+        .post(`${this.baseApi}/ordenes/${target.id}/items`, {
+          items: itemsPayload,
+          notas: this.ordenNotas().trim() || undefined,
+        })
+        .subscribe({
+          next: () => {
+            this.isSubmitting.set(false);
+            this.clearCart();
+            this.appendTargetOrder.set(null);
+            this.refreshAll();
+            this.showFeedback(
+              `Ronda agregada a ${this.formatFolio(target)} y enviada a cocina`,
+              'success',
+            );
+          },
+          error: (err) => {
+            this.isSubmitting.set(false);
+            this.showFeedback(
+              err?.error?.message || 'Error al agregar ronda a la orden',
+              'error',
+            );
+          },
+        });
+      return;
+    }
+
+    const payload = {
+      tipoOrden: this.tipoOrden(),
+      mesaId: this.tipoOrden() === 'comedor' ? this.selectedMesaId() : null,
+      notas: this.ordenNotas().trim() || undefined,
+      items: itemsPayload,
+    };
+
+    this.http.post(`${this.baseApi}/ordenes`, payload).subscribe({
+      next: () => {
         this.isSubmitting.set(false);
         this.clearCart();
-        this.selectedMesaId.set(null);
-        this.showFeedback(res.message || 'Comanda enviada a cocina (sin iniciar)', 'success');
-
-        this.loadProductos();
-        this.loadMesas();
-        this.loadOrdenesActivas();
+        this.refreshAll();
+        this.showFeedback('✅ Comanda enviada a cocina', 'success');
       },
       error: (err) => {
         this.isSubmitting.set(false);
         this.showFeedback(
-          err.error?.message || 'No se pudo procesar la orden',
-          'error'
+          err?.error?.message || 'Error al registrar la orden',
+          'error',
         );
-      }
+      },
     });
   }
 
-  // ==================== MÉTODOS DE COBRO Y REIMPRESIÓN ====================
+  // ==================== CUENTAS ABIERTAS Y ESTADOS COCINA ====================
 
-  openCheckoutModal(orden: ActiveOrder): void {
-    if (!this.isOrdenListaParaCobrar(orden)) {
-      const estado = this.getEstadoCocinaNormalizado(orden);
-      this.showFeedback(
-        estado === 'en_preparacion'
-          ? 'No se puede cobrar aún: el pedido está en preparación en cocina'
-          : 'No se puede cobrar aún: el pedido sigue sin iniciar en cocina',
-        'warning'
+  openOrdersModal(filter: 'todas' | 'sin_iniciar' | 'en_preparacion' | 'listo' = 'todas'): void {
+    this.ordersFilter.set(filter);
+    this.loadOrdenesActivas();
+    this.isOrdersModalOpen.set(true);
+  }
+
+  formatFolio(ord: ActiveOrder): string {
+    if (ord.folio !== undefined && ord.folio !== null) {
+      return `#${String(ord.folio).padStart(3, '0')}`;
+    }
+    return `#${String(ord.id).slice(0, 6).toUpperCase()}`;
+  }
+
+  getEstadoCocinaNormalizado(ord: ActiveOrder): 'sin_iniciar' | 'en_preparacion' | 'listo' {
+    const raw = String(ord.estadoCocina || ord.estado || '').toLowerCase();
+    if (raw === 'listo' || raw === 'completado' || raw === 'entregado') {
+      return 'listo';
+    }
+    if (raw === 'en_preparacion' || raw === 'preparando') {
+      return 'en_preparacion';
+    }
+    if (Array.isArray(ord.detalles) && ord.detalles.length > 0) {
+      const estados = ord.detalles.map((d) =>
+        String(d.estadoCocina || 'pendiente').toLowerCase(),
       );
+      if (estados.every((e) => e === 'listo' || e === 'cancelado')) return 'listo';
+      if (estados.some((e) => e === 'en_preparacion' || e === 'listo')) {
+        return 'en_preparacion';
+      }
+    }
+    return 'sin_iniciar';
+  }
+
+  getEstadoOrdenLabel(ord: ActiveOrder): string {
+    const estado = this.getEstadoCocinaNormalizado(ord);
+    if (estado === 'listo') return '✅ Listo para cobrar';
+    if (estado === 'en_preparacion') return '🔥 En preparación';
+    return '⏳ Sin iniciar';
+  }
+
+  isOrdenListaParaCobrar(ord: ActiveOrder): boolean {
+    return this.getEstadoCocinaNormalizado(ord) === 'listo';
+  }
+
+  getOrdenElapsedTimer(ord: ActiveOrder): string {
+    const createdStr = ord.creadoEn || ord.createdAt;
+    if (!createdStr) return '';
+    const diffMs = Math.max(0, this.nowTick() - new Date(createdStr).getTime());
+    const mins = Math.floor(diffMs / 60000);
+    return `${mins} min`;
+  }
+
+  // ==================== CANCELACIÓN DE ORDEN ====================
+
+  openCancelOrderModal(ord: ActiveOrder): void {
+    this.cancelTargetOrder.set(ord);
+    this.cancelMotivo.set('');
+  }
+
+  closeCancelOrderModal(): void {
+    this.cancelTargetOrder.set(null);
+    this.cancelMotivo.set('');
+  }
+
+  confirmarCancelacionOrden(): void {
+    const ord = this.cancelTargetOrder();
+    if (!ord || !this.cancelMotivo().trim() || this.isCancelingOrder()) return;
+
+    this.isCancelingOrder.set(true);
+
+    this.http
+      .patch(`${this.baseApi}/ordenes/${ord.id}/cancelar`, {
+        motivo: this.cancelMotivo().trim(),
+      })
+      .subscribe({
+        next: () => {
+          this.isCancelingOrder.set(false);
+          this.closeCancelOrderModal();
+          this.refreshAll();
+          this.showFeedback(
+            `Orden ${this.formatFolio(ord)} cancelada e insumos reintegrados`,
+            'warning',
+          );
+        },
+        error: (err) => {
+          this.isCancelingOrder.set(false);
+          this.showFeedback(
+            err?.error?.message || 'No se pudo cancelar la orden',
+            'error',
+          );
+        },
+      });
+  }
+
+  // ==================== COBRO Y TICKETS ====================
+
+  openCheckoutModal(ord: ActiveOrder): void {
+    if (!this.turnoActivo()) {
+      this.isOrdersModalOpen.set(false);
+      this.showFeedback(
+        '⚠️ Abre tu turno de caja o solicita tu fondo antes de cobrar',
+        'error',
+      );
+      this.isTurnoModalOpen.set(true);
       return;
     }
 
     this.isOrdersModalOpen.set(false);
     this.paymentReceipt.set(null);
-    this.lastPaidOrderId.set(orden.id);
-    this.checkoutOrder.set(orden);
+    this.lastPaidOrderId.set(null);
+    this.checkoutOrder.set(ord);
     this.pagosDraft.set([
       {
         metodoPago: 'efectivo',
-        monto: Number(orden.total),
-        idTransaccion: ''
-      }
+        monto: Number(ord.total),
+        idTransaccion: '',
+      },
     ]);
   }
 
@@ -499,127 +722,139 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
     this.pagosDraft.set([]);
   }
 
+  setMontoRapido(monto: number): void {
+    const list = [...this.pagosDraft()];
+    if (list.length > 0) {
+      list[0] = { ...list[0], monto: Number(monto) };
+      this.pagosDraft.set(list);
+    }
+  }
+
   addPagoLine(): void {
     const restante = this.restanteCheckout();
-    this.pagosDraft.update(list => [
+    this.pagosDraft.update((list) => [
       ...list,
       {
         metodoPago: 'tarjeta',
         monto: restante > 0 ? restante : 0,
-        idTransaccion: ''
-      }
+        idTransaccion: '',
+      },
     ]);
   }
 
   removePagoLine(index: number): void {
-    if (this.pagosDraft().length <= 1) return;
-    this.pagosDraft.update(list => list.filter((_, i) => i !== index));
+    this.pagosDraft.update((list) => list.filter((_, i) => i !== index));
   }
 
-  updatePagoMetodo(index: number, metodoPago: MetodoPago): void {
-    this.pagosDraft.update(list =>
-      list.map((p, i) =>
-        i === index
-          ? { ...p, metodoPago, idTransaccion: metodoPago === 'efectivo' ? '' : p.idTransaccion }
-          : p
-      )
+  updatePagoMetodo(index: number, metodoPago: string): void {
+    this.pagosDraft.update((list) =>
+      list.map((p, i) => (i === index ? { ...p, metodoPago } : p)),
     );
   }
 
   updatePagoMonto(index: number, monto: number): void {
-    this.pagosDraft.update(list =>
-      list.map((p, i) => (i === index ? { ...p, monto: Number(monto) } : p))
+    this.pagosDraft.update((list) =>
+      list.map((p, i) => (i === index ? { ...p, monto: Number(monto || 0) } : p)),
     );
   }
 
   updatePagoTransaccion(index: number, idTransaccion: string): void {
-    this.pagosDraft.update(list =>
-      list.map((p, i) => (i === index ? { ...p, idTransaccion } : p))
+    this.pagosDraft.update((list) =>
+      list.map((p, i) => (i === index ? { ...p, idTransaccion } : p)),
     );
   }
 
-  setMontoRapido(monto: number): void {
-    if (this.pagosDraft().length === 0) return;
-    this.updatePagoMonto(0, monto);
-  }
-
   procesarCobro(): void {
-    const orden = this.checkoutOrder();
-    if (!orden || this.isProcessingPayment()) return;
-
-    if (!this.isOrdenListaParaCobrar(orden)) {
-      this.showFeedback('El pedido aún no ha sido liberado por cocina', 'warning');
-      return;
-    }
-
-    const pagosLimpios: PagoItemPayload[] = this.pagosDraft().map(p => ({
-      metodoPago: p.metodoPago,
-      monto: Number(p.monto),
-      ...(p.idTransaccion && p.idTransaccion.trim().length > 0
-        ? { idTransaccion: p.idTransaccion.trim() }
-        : {})
-    }));
-
-    if (pagosLimpios.some(p => !Number.isFinite(p.monto) || p.monto <= 0)) {
-      this.showFeedback('Todos los montos de pago deben ser mayores a $0.00', 'warning');
-      return;
-    }
-
-    if (this.totalAbonadoCheckout() < this.totalCheckout()) {
-      this.showFeedback(
-        `Faltan $${this.restanteCheckout().toFixed(2)} por cubrir`,
-        'warning'
-      );
-      return;
-    }
+    const ord = this.checkoutOrder();
+    if (!ord || this.restanteCheckout() > 0 || this.isProcessingPayment()) return;
 
     this.isProcessingPayment.set(true);
 
-    this.paymentService.registrarPago(orden.id, { pagos: pagosLimpios }).subscribe({
-      next: (res) => {
-        this.isProcessingPayment.set(false);
-        this.paymentReceipt.set(res);
-        this.showFeedback(res.message, 'success');
+    const pagosPayload = this.pagosDraft().map((p) => ({
+      metodoPago: p.metodoPago,
+      monto: Number(p.monto),
+      idTransaccion: p.idTransaccion?.trim() || undefined,
+    }));
 
-        this.loadOrdenesActivas();
-        this.loadMesas();
-      },
-      error: (err) => {
-        this.isProcessingPayment.set(false);
-        this.showFeedback(
-          err.error?.message || 'No se pudo procesar el pago',
-          'error'
-        );
-      }
-    });
+    this.http
+      .post<PaymentReceipt>(`${this.baseApi}/pagos/orden/${ord.id}`, {
+        pagos: pagosPayload,
+      })
+      .subscribe({
+        next: (res) => {
+          this.isProcessingPayment.set(false);
+          this.lastPaidOrderId.set(ord.id);
+          this.paymentReceipt.set(res);
+          this.refreshAll();
+          this.loadMiTurno();
+        },
+        error: (err) => {
+          this.isProcessingPayment.set(false);
+          this.showFeedback(
+            err?.error?.message || 'Error al registrar el cobro',
+            'error',
+          );
+        },
+      });
   }
 
-  reimprimirTicket(ordenId: string | number, tipoTicket: TipoTicketReimpresion): void {
-    this.paymentService.solicitarReimpresion(ordenId, tipoTicket).subscribe({
-      next: (res) => {
-        this.showFeedback(res.message, 'success');
-      },
-      error: (err) => {
-        this.showFeedback(
-          err.error?.message || 'No se pudo registrar la impresión del ticket',
-          'error'
-        );
-      }
-    });
+  reimprimirTicket(ordenId: string, tipo: 'precuenta' | 'ticket_final'): void {
+    this.http
+      .post(`${this.baseApi}/pagos/orden/${ordenId}/reimpresion`, { tipo })
+      .subscribe({
+        next: () => {
+          this.showFeedback(
+            tipo === 'precuenta'
+              ? '🧾 Precuenta enviada a impresión'
+              : '🖨️ Ticket final reimpreso',
+            'success',
+          );
+        },
+        error: () => {
+          window.print();
+        },
+      });
   }
 
-  showFeedback(msg: string, type: 'success' | 'warning' | 'error'): void {
+  // ==================== UTILIDADES UI Y SESIÓN ====================
+
+  toggleSound(): void {
+    this.soundEnabled.update((v) => !v);
+  }
+
+  private playNotificationBeep(): void {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.18);
+    } catch {
+      // Ignorar si el navegador bloquea autoplay de audio
+    }
+  }
+
+  showFeedback(msg: string, type: 'success' | 'warning' | 'error' = 'success'): void {
     this.feedbackMessage.set(msg);
     this.feedbackType.set(type);
-    setTimeout(() => {
-      if (this.feedbackMessage() === msg) {
-        this.feedbackMessage.set('');
-      }
-    }, 4500);
+    if (this.feedbackTimeout) clearTimeout(this.feedbackTimeout);
+    this.feedbackTimeout = setTimeout(() => {
+      this.feedbackMessage.set('');
+    }, 4000);
   }
 
   onLogout(): void {
-    this.authService.logout();
-    this.router.navigate(['/login']);
+    const auth = this.authService as any;
+    if (typeof auth.logout === 'function') {
+      auth.logout();
+    } else {
+      sessionStorage.clear();
+      this.router.navigate(['/login']);
+    }
   }
 }

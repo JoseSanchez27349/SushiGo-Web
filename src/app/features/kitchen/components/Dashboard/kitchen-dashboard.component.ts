@@ -1,135 +1,243 @@
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
-import { KitchenService } from '../../../../core/services/kitchen.service';
-import { EstadoCocina, KitchenComanda, NivelAlertaCocina } from '../../../../core/models/kitchen.model';
+import { RealtimeService } from '../../../../core/services/realtime.service';
+import {
+  EstadoCocina,
+  KitchenComanda,
+  KitchenOrderItem,
+  NivelAlertaCocina,
+} from '../../../../core/models/kitchen.model';
 
 @Component({
   selector: 'app-kitchen-dashboard',
   standalone: true,
   imports: [CommonModule, RouterLink],
-  templateUrl: './kitchen-dashboard.component.html'
+  templateUrl: './kitchen-dashboard.component.html',
 })
 export class KitchenDashboardComponent implements OnInit, OnDestroy {
-  private authService = inject(AuthService);
-  private kitchenService = inject(KitchenService);
+  private http = inject(HttpClient);
   private router = inject(Router);
+  private authService = inject(AuthService);
+  private realtimeService = inject(RealtimeService);
+
+  private apiUrl = 'http://localhost:3000/api/v1/cocina';
+  private pollIntervalId: ReturnType<typeof setInterval> | null = null;
+  private clockIntervalId: ReturnType<typeof setInterval> | null = null;
+  private realtimeSub = new Subscription();
 
   user = this.authService.currentUser;
-  isAdmin = computed(() => this.user()?.role?.toUpperCase() === 'ADMIN');
+  isAdmin = computed(() => this.user()?.role === 'Admin');
+
+  soundEnabled = this.realtimeService.soundEnabled;
+  socketConnected = this.realtimeService.isConnected;
 
   comandas = signal<KitchenComanda[]>([]);
-  filtroEstado = signal<'todas' | 'en_espera' | 'en_preparacion'>('todas');
   isLoading = signal<boolean>(true);
-  updatingOrderId = signal<string | null>(null);
   autoRefresh = signal<boolean>(true);
-  now = signal<number>(Date.now());
+  filtroEstado = signal<'todas' | 'en_espera' | 'en_preparacion'>('todas');
+
+  updatingOrderId = signal<string | null>(null);
+  updatingItemId = signal<string | null>(null);
 
   feedbackMessage = signal<string>('');
   feedbackType = signal<'success' | 'error'>('success');
-
-  private pollingIntervalId: ReturnType<typeof setInterval> | null = null;
-  private clockIntervalId: ReturnType<typeof setInterval> | null = null;
-
-  filteredComandas = computed(() => {
-    const filtro = this.filtroEstado();
-    if (filtro === 'todas') return this.comandas();
-    return this.comandas().filter(c => c.estadoCocina === filtro);
-  });
+  now = signal<number>(Date.now());
 
   stats = computed(() => {
     const lista = this.comandas();
+    let enEspera = 0;
+    let enPreparacion = 0;
+    let retrasadas = 0;
+
+    for (const c of lista) {
+      if (c.estadoCocina === 'en_espera') enEspera++;
+      if (c.estadoCocina === 'en_preparacion') enPreparacion++;
+      if (this.getLiveTimer(c).estaRetrasada) retrasadas++;
+    }
+
     return {
       total: lista.length,
-      enEspera: lista.filter(c => c.estadoCocina === 'en_espera').length,
-      enPreparacion: lista.filter(c => c.estadoCocina === 'en_preparacion').length,
-      retrasadas: lista.filter(c => this.getLiveTimer(c).estaRetrasada).length
+      enEspera,
+      enPreparacion,
+      retrasadas,
     };
+  });
+
+  filteredComandas = computed(() => {
+    const filtro = this.filtroEstado();
+    const lista = this.comandas();
+    if (filtro === 'todas') return lista;
+    return lista.filter((c) => c.estadoCocina === filtro);
   });
 
   ngOnInit(): void {
     this.loadComandas(true);
 
-    // Sincronizar con backend cada 12 segundos
-    this.pollingIntervalId = setInterval(() => {
-      if (this.autoRefresh() && !this.updatingOrderId()) {
-        this.loadComandas(false);
-      }
-    }, 12_000);
-
-    // Actualizar reloj local cada segundo para contadores en vivo
+    // Reloj en vivo cada segundo
     this.clockIntervalId = setInterval(() => {
       this.now.set(Date.now());
     }, 1_000);
+
+    // Respaldo de sincronización cada 15s por si hay microcortes de red
+    this.pollIntervalId = setInterval(() => {
+      if (this.autoRefresh()) {
+        this.loadComandas(false);
+      }
+    }, 15_000);
+
+    // Notificaciones instantáneas vía Socket.io
+    this.realtimeSub.add(
+      this.realtimeService.onNuevaComanda().subscribe((evento) => {
+        this.realtimeService.playKitchenAlert();
+        this.loadComandas(false);
+
+        const destino = evento.mesa ? `Mesa ${evento.mesa}` : 'Para Llevar';
+        const mensaje = evento.esRondaAdicional
+          ? `➕ Nueva ronda en Folio #${evento.folio} (${destino})`
+          : `🔥 Nueva comanda #${evento.folio} (${destino})`;
+        this.showFeedback(mensaje, 'success');
+      }),
+    );
+
+    this.realtimeSub.add(
+      this.realtimeService.onOrdenCancelada().subscribe((evento) => {
+        this.comandas.update((lista) => lista.filter((c) => c.ordenId !== evento.ordenId));
+        this.showFeedback(`🗑️ Orden #${evento.folio} cancelada desde POS`, 'error');
+      }),
+    );
   }
 
   ngOnDestroy(): void {
-    if (this.pollingIntervalId) clearInterval(this.pollingIntervalId);
+    if (this.pollIntervalId) clearInterval(this.pollIntervalId);
     if (this.clockIntervalId) clearInterval(this.clockIntervalId);
+    this.realtimeSub.unsubscribe();
   }
 
   loadComandas(showSpinner = false): void {
     if (showSpinner) this.isLoading.set(true);
 
-    this.kitchenService.getComandas().subscribe({
+    this.http.get<{ comandas: KitchenComanda[] }>(`${this.apiUrl}/comandas`).subscribe({
       next: (res) => {
         this.comandas.set(res.comandas || []);
         this.isLoading.set(false);
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error al cargar comandas:', err);
         this.isLoading.set(false);
         if (showSpinner) {
           this.showFeedback('No se pudieron cargar las comandas de cocina', 'error');
         }
-      }
+      },
     });
   }
 
+  toggleAutoRefresh(): void {
+    this.autoRefresh.update((v) => !v);
+    if (this.autoRefresh()) {
+      this.loadComandas(false);
+    }
+  }
+
+  toggleSound(): void {
+    this.realtimeService.toggleSound();
+  }
+
+  // Cambiar estado de un platillo individual
+  avanzarEstadoItem(
+    comanda: KitchenComanda,
+    item: KitchenOrderItem,
+    nuevoEstado: EstadoCocina,
+  ): void {
+    if (this.updatingItemId()) return;
+    this.updatingItemId.set(item.id);
+
+    this.http
+      .put<{ message: string; ordenCompletaLista: boolean }>(
+        `${this.apiUrl}/items/${item.id}/estado`,
+        { estadoCocina: nuevoEstado },
+      )
+      .subscribe({
+        next: (res) => {
+          this.updatingItemId.set(null);
+          if (res.ordenCompletaLista) {
+            this.showFeedback(
+              `✅ Orden #${comanda.orden.folio} completa y enviada a caja`,
+              'success',
+            );
+          }
+          this.loadComandas(false);
+        },
+        error: (err) => {
+          this.updatingItemId.set(null);
+          this.showFeedback(
+            err?.error?.message || 'Error al actualizar el platillo',
+            'error',
+          );
+        },
+      });
+  }
+
+  // Cambiar estado de toda la comanda en bloque
   avanzarEstado(comanda: KitchenComanda, nuevoEstado: EstadoCocina): void {
     if (this.updatingOrderId()) return;
-
     this.updatingOrderId.set(comanda.ordenId);
 
-    this.kitchenService.cambiarEstado(comanda.ordenId, nuevoEstado).subscribe({
-      next: (res) => {
-        this.updatingOrderId.set(null);
-
-        if (nuevoEstado === 'listo') {
-          // Quitar comanda de la pantalla activa al marcarla lista
-          this.comandas.update(lista => lista.filter(c => c.ordenId !== comanda.ordenId));
-          this.showFeedback(`Folio #${comanda.orden.folio} marcado como LISTO`, 'success');
-        } else {
-          this.showFeedback(res.message || 'Estado actualizado', 'success');
+    this.http
+      .put<{ message: string }>(`${this.apiUrl}/comandas/${comanda.ordenId}/estado`, {
+        estadoCocina: nuevoEstado,
+      })
+      .subscribe({
+        next: () => {
+          this.updatingOrderId.set(null);
+          const texto =
+            nuevoEstado === 'listo'
+              ? `✅ Orden #${comanda.orden.folio} liberada para cobro`
+              : `🔥 Comanda #${comanda.orden.folio} en preparación`;
+          this.showFeedback(texto, 'success');
           this.loadComandas(false);
-        }
-      },
-      error: (err) => {
-        this.updatingOrderId.set(null);
-        this.showFeedback(
-          err.error?.message || 'No se pudo actualizar el estado de la comanda',
-          'error'
-        );
-      }
-    });
+        },
+        error: (err) => {
+          this.updatingOrderId.set(null);
+          this.showFeedback(
+            err?.error?.message || 'Error al actualizar estado de la comanda',
+            'error',
+          );
+        },
+      });
   }
 
-  // Cálculo dinámico de tiempo transcurrido usando el reloj local
+  // Contador general ininterrumpido desde que nació la orden + tiempo secundario de preparación
   getLiveTimer(comanda: KitchenComanda): {
     textoTiempo: string;
+    textoPreparacion: string | null;
     minutosTranscurridos: number;
     estaRetrasada: boolean;
     nivelAlerta: NivelAlertaCocina;
   } {
-    const referencia = comanda.inicioPreparacionEn || comanda.creadoEn;
-    const diffMs = Math.max(0, this.now() - new Date(referencia).getTime());
+    const referenciaTotal = comanda.orden.creadoEn || comanda.creadoEn;
+    const diffMs = Math.max(0, this.now() - new Date(referenciaTotal).getTime());
     const totalSegundos = Math.floor(diffMs / 1000);
     const minutos = Math.floor(totalSegundos / 60);
     const segundos = totalSegundos % 60;
 
+    let textoPreparacion: string | null = null;
+    if (comanda.inicioPreparacionEn) {
+      const diffPrep = Math.max(
+        0,
+        this.now() - new Date(comanda.inicioPreparacionEn).getTime(),
+      );
+      const segPrep = Math.floor(diffPrep / 1000);
+      const minPrep = Math.floor(segPrep / 60);
+      const remPrep = segPrep % 60;
+      textoPreparacion = `${String(minPrep).padStart(2, '0')}:${String(remPrep).padStart(2, '0')}`;
+    }
+
     const tiempoEstimado = comanda.tiempoEstimadoMinutos || 15;
-    const estaRetrasada =
-      comanda.estadoCocina === 'en_preparacion' && minutos > tiempoEstimado;
+    const estaRetrasada = minutos > tiempoEstimado;
 
     const nivelAlerta: NivelAlertaCocina = estaRetrasada
       ? 'critico'
@@ -137,37 +245,43 @@ export class KitchenDashboardComponent implements OnInit, OnDestroy {
         ? 'advertencia'
         : 'normal';
 
-    const mm = String(minutos).padStart(2, '0');
-    const ss = String(segundos).padStart(2, '0');
-
     return {
-      textoTiempo: `${mm}:${ss}`,
+      textoTiempo: `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`,
+      textoPreparacion,
       minutosTranscurridos: minutos,
       estaRetrasada,
-      nivelAlerta
+      nivelAlerta,
     };
   }
 
+  getItemTimerText(item: KitchenOrderItem): string {
+    if (!item.creadoEn) return '';
+    const diffMs = Math.max(0, this.now() - new Date(item.creadoEn).getTime());
+    const totalSeg = Math.floor(diffMs / 1000);
+    const mm = String(Math.floor(totalSeg / 60)).padStart(2, '0');
+    const ss = String(totalSeg % 60).padStart(2, '0');
+    return `${mm}:${ss}`;
+  }
+
+  getItemsListosCount(comanda: KitchenComanda): number {
+    return comanda.orden.detalles.filter((d) => d.estadoCocina === 'listo').length;
+  }
+
   getMesaLabel(comanda: KitchenComanda): string {
-    if (!comanda.orden.mesa) {
-      return comanda.orden.tipoOrden === 'llevar' ? 'Para Llevar' : 'Sin Mesa';
+    if (comanda.orden.mesa) {
+      return `Mesa ${comanda.orden.mesa.numeroMesa}`;
     }
-    const val = String(comanda.orden.mesa.numeroMesa).trim();
-    return /^\d+$/.test(val) ? `Mesa ${val}` : val;
+    return comanda.orden.tipoOrden === 'llevar' ? 'Para Llevar' : comanda.orden.tipoOrden;
   }
 
-  toggleAutoRefresh(): void {
-    this.autoRefresh.update(v => !v);
-  }
-
-  showFeedback(msg: string, type: 'success' | 'error'): void {
-    this.feedbackMessage.set(msg);
+  showFeedback(message: string, type: 'success' | 'error'): void {
+    this.feedbackMessage.set(message);
     this.feedbackType.set(type);
     setTimeout(() => {
-      if (this.feedbackMessage() === msg) {
+      if (this.feedbackMessage() === message) {
         this.feedbackMessage.set('');
       }
-    }, 3500);
+    }, 4500);
   }
 
   onLogout(): void {

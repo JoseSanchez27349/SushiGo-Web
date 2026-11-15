@@ -8,10 +8,10 @@ import { AuthResponse, AdminLoginPayload, EmployeeLoginPayload, AuthUser } from 
 })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:3000/api/v1/auth'; // Asegúrate de ajustar el puerto/host si es necesario
+  private apiUrl = 'http://localhost:3000/api/v1/auth';
 
   currentUser = signal<AuthUser | null>(this.getStoredUser());
-  token = signal<string | null>(localStorage.getItem('sushigo_token'));
+  token = signal<string | null>(sessionStorage.getItem('sushigo_token'));
 
   // POST /login-staff
   loginEmployee(payload: EmployeeLoginPayload): Observable<AuthResponse> {
@@ -28,21 +28,21 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('sushigo_token');
-    localStorage.removeItem('sushigo_user');
+    sessionStorage.removeItem('sushigo_token');
+    sessionStorage.removeItem('sushigo_user');
     this.currentUser.set(null);
     this.token.set(null);
   }
 
   private saveSession(response: AuthResponse): void {
-    localStorage.setItem('sushigo_token', response.token);
-    localStorage.setItem('sushigo_user', JSON.stringify(response.user));
+    sessionStorage.setItem('sushigo_token', response.token);
+    sessionStorage.setItem('sushigo_user', JSON.stringify(response.user));
     this.token.set(response.token);
     this.currentUser.set(response.user);
   }
 
   private getStoredUser(): AuthUser | null {
-    const user = localStorage.getItem('sushigo_user');
+    const user = sessionStorage.getItem('sushigo_user');
     return user ? JSON.parse(user) : null;
   }
 }
