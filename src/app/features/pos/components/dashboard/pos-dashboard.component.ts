@@ -666,8 +666,9 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
 
     this.isCancelingOrder.set(true);
 
+    // 🛠️ CORRECCIÓN: Se cambió .patch() por .put() para que coincida con el backend
     this.http
-      .patch(`${this.baseApi}/ordenes/${ord.id}/cancelar`, {
+      .put(`${this.baseApi}/ordenes/${ord.id}/cancelar`, {
         motivo: this.cancelMotivo().trim(),
       })
       .subscribe({

@@ -29,6 +29,10 @@ export class KitchenDashboardComponent implements OnInit, OnDestroy {
   private clockIntervalId: ReturnType<typeof setInterval> | null = null;
   private realtimeSub = new Subscription();
 
+  // 🔊 Variables para el Asistente de Voz
+  private alertasSonadas = new Set<string>(); // Para no repetir la misma alerta
+  private vozAsistente: SpeechSynthesisVoice | null = null;
+
   user = this.authService.currentUser;
   isAdmin = computed(() => this.user()?.role === 'Admin');
 
@@ -75,11 +79,15 @@ export class KitchenDashboardComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    // 🔊 NUEVO: Cargar las voces del sistema
+    this.initSpeechSynthesis();
+
     this.loadComandas(true);
 
-    // Reloj en vivo cada segundo
+    // Reloj en vivo cada segundo (y detección de retrasos para el asistente)
     this.clockIntervalId = setInterval(() => {
       this.now.set(Date.now());
+      this.checkRetrasosVoz(); // 🔊 NUEVO: Revisar si hay retrasos
     }, 1_000);
 
     // Respaldo de sincronización cada 15s por si hay microcortes de red
@@ -115,7 +123,77 @@ export class KitchenDashboardComponent implements OnInit, OnDestroy {
     if (this.pollIntervalId) clearInterval(this.pollIntervalId);
     if (this.clockIntervalId) clearInterval(this.clockIntervalId);
     this.realtimeSub.unsubscribe();
+    
+    // 🔊 NUEVO: Detener cualquier voz al salir del componente
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
   }
+
+  // ==================== 🔊 LÓGICA DEL ASISTENTE VIRTUAL ====================
+  
+  private initSpeechSynthesis(): void {
+    if (!('speechSynthesis' in window)) return;
+    // Esperar a que el navegador cargue las voces
+    window.speechSynthesis.onvoiceschanged = () => {
+      const voces = window.speechSynthesis.getVoices();
+      // Buscar una voz en español (preferiblemente nativa de Google o Microsoft)
+      this.vozAsistente = voces.find(v => v.lang.startsWith('es-')) || voces[0];
+    };
+  }
+
+  private checkRetrasosVoz(): void {
+    if (!this.soundEnabled() || !('speechSynthesis' in window)) return;
+
+    const comandasRetrasadas = this.comandas().filter(c => {
+      const timer = this.getLiveTimer(c);
+      return timer.estaRetrasada && c.estadoCocina !== 'listo'; 
+    });
+
+    // Si hay comandas que acaban de retrasarse
+    for (const comanda of comandasRetrasadas) {
+      // Validar si ya sonamos esta alerta para esta orden
+      if (!this.alertasSonadas.has(comanda.ordenId)) {
+        this.alertasSonadas.add(comanda.ordenId);
+        this.hablarAlerta(comanda);
+      }
+    }
+
+    // Limpiar las alertas de pedidos que ya se completaron
+    const idsActivos = new Set(comandasRetrasadas.map(c => c.ordenId));
+    for (const id of this.alertasSonadas) {
+      if (!idsActivos.has(id)) {
+        this.alertasSonadas.delete(id);
+      }
+    }
+  }
+
+  private hablarAlerta(comanda: KitchenComanda): void {
+    if (!this.vozAsistente && window.speechSynthesis.getVoices().length > 0) {
+        this.vozAsistente = window.speechSynthesis.getVoices()[0];
+    }
+
+    const mesa = this.getMesaLabel(comanda);
+    const folio = comanda.orden.folio;
+    const tiempo = this.getLiveTimer(comanda).minutosTranscurridos;
+
+    // Frase que dirá la IA
+    const texto = `Atención cocina. El pedido folio ${folio}, de la ${mesa}, lleva ${tiempo} minutos en espera. Por favor, apresuren la preparación.`;
+
+    const utterance = new SpeechSynthesisUtterance(texto);
+    if (this.vozAsistente) {
+      utterance.voice = this.vozAsistente;
+    }
+    utterance.lang = 'es-MX';
+    utterance.rate = 1.05; // Velocidad normal
+    utterance.pitch = 1.1; // Tono un poco más agudo, tipo asistente
+
+    // Para evitar que se trabe si hay varias alertas, cancelamos la anterior y hablamos
+    window.speechSynthesis.cancel(); 
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // ==================== FIN LÓGICA ASISTENTE ====================
 
   loadComandas(showSpinner = false): void {
     if (showSpinner) this.isLoading.set(true);
@@ -124,6 +202,8 @@ export class KitchenDashboardComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.comandas.set(res.comandas || []);
         this.isLoading.set(false);
+        // Revisar retrasos al cargar datos nuevos
+        this.checkRetrasosVoz();
       },
       error: (err) => {
         console.error('Error al cargar comandas:', err);
@@ -144,9 +224,11 @@ export class KitchenDashboardComponent implements OnInit, OnDestroy {
 
   toggleSound(): void {
     this.realtimeService.toggleSound();
+    if (!this.soundEnabled() && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // Silenciar voz si se apaga el sonido
+    }
   }
 
-  // Cambiar estado de un platillo individual
   avanzarEstadoItem(
     comanda: KitchenComanda,
     item: KitchenOrderItem,
@@ -181,7 +263,6 @@ export class KitchenDashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  // Cambiar estado de toda la comanda en bloque
   avanzarEstado(comanda: KitchenComanda, nuevoEstado: EstadoCocina): void {
     if (this.updatingOrderId()) return;
     this.updatingOrderId.set(comanda.ordenId);
@@ -210,7 +291,6 @@ export class KitchenDashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  // Contador general ininterrumpido desde que nació la orden + tiempo secundario de preparación
   getLiveTimer(comanda: KitchenComanda): {
     textoTiempo: string;
     textoPreparacion: string | null;

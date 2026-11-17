@@ -38,16 +38,23 @@
 
     <!-- Controles y cambio rápido de módulo -->
     <div class="flex items-center gap-2">
+      
+      <!-- 🔊 NUEVO BOTÓN DE ASISTENTE DE VOZ -->
       <button 
         type="button"
         (click)="toggleSound()"
-        title="Activar o silenciar timbre de nuevas comandas"
-        class="h-9 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5"
+        [title]="soundEnabled() ? 'Asistente de voz ACTIVADO: Avisará de pedidos retrasados' : 'Asistente de voz SILENCIADO'"
+        class="h-9 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center gap-2"
         [ngClass]="soundEnabled() 
-          ? 'bg-zinc-900 border-zinc-700 text-amber-300 hover:bg-zinc-800' 
+          ? 'bg-zinc-900 border-zinc-700 text-amber-300 hover:bg-zinc-800 shadow-[0_0_10px_rgba(245,158,11,0.15)]' 
           : 'bg-[#222222] border-zinc-800 text-zinc-500'">
-        <span>{{ soundEnabled() ? '🔔' : '🔕' }}</span>
-        <span class="hidden sm:inline">{{ soundEnabled() ? 'Sonido' : 'Mudo' }}</span>
+        <span class="relative flex h-3 w-3">
+          @if (soundEnabled()) {
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+          }
+          <span class="relative inline-flex rounded-full h-3 w-3" [ngClass]="soundEnabled() ? 'bg-amber-500' : 'bg-zinc-500'"></span>
+        </span>
+        <span class="hidden sm:inline">{{ soundEnabled() ? 'Asistente ON' : 'Asistente OFF' }}</span>
       </button>
 
       <button 
