@@ -1,13 +1,14 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router'; // <-- IMPORTANTE: Agregado
 import { StaffService } from '../../../../core/services/staff.service';
 import { StaffUser, CreateStaffPayload, UpdateStaffPayload } from '../../../../core/models/staff.model';
 
 @Component({
   selector: 'app-staff-management',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink], // <-- IMPORTANTE: RouterLink agregado aquí
   templateUrl: './staff-management.component.html'
 })
 export class StaffManagementComponent implements OnInit {
