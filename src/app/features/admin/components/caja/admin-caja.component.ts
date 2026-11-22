@@ -136,8 +136,16 @@ import { RealtimeService } from '../../../../core/services/realtime.service';
             } @else {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 @for (t of info.turnosAbiertos; track t.id) {
-                  <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-5 space-y-4">
-                    <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                  <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-5 space-y-4 relative">
+                    
+                    <!-- Botón de Cerrar Turno (Arriba a la derecha) -->
+                    <button 
+                      (click)="abrirModalCierre(t)"
+                      class="absolute top-4 right-4 bg-red-950/60 hover:bg-red-900 text-red-300 border border-red-500/30 px-3 py-1 rounded-lg text-[10px] font-bold transition-all">
+                      Cerrar Turno
+                    </button>
+
+                    <div class="flex items-center justify-between border-b border-zinc-800 pb-3 pr-24">
                       <div>
                         <div class="flex items-center gap-2">
                           <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -205,10 +213,10 @@ import { RealtimeService } from '../../../../core/services/realtime.service';
             }
           </section>
 
-          <!-- ==================== CORTES CERRADOS HOY ==================== -->
+          <!-- ==================== CORTES CERRADOS HOY (HISTORIAL) ==================== -->
           @if (info.turnosCerradosHoy.length > 0) {
             <section class="bg-[#181818] border border-zinc-800 rounded-2xl p-5 space-y-3">
-              <h2 class="font-bold text-sm text-white">📑 Cortes de Caja Realizados Hoy</h2>
+              <h2 class="font-bold text-sm text-white">📑 Historial de Cortes (Hoy)</h2>
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs">
                   <thead class="text-zinc-400 border-b border-zinc-800">
@@ -244,6 +252,63 @@ import { RealtimeService } from '../../../../core/services/realtime.service';
 
         }
       </main>
+
+      <!-- ==================== MODAL DE CIERRE DE CAJA ==================== -->
+      @if (isCierreModalOpen()) {
+        <div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div class="bg-[#181818] border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+              <div>
+                <h2 class="text-base font-bold text-white">Cierre de Caja</h2>
+                <p class="text-[11px] text-zinc-400">Mesero: {{ turnoACerrar()?.usuario?.nombre }}</p>
+              </div>
+              <button (click)="cerrarModalCierre()" class="text-zinc-400 hover:text-white text-xl font-bold">&times;</button>
+            </div>
+
+            <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3 text-xs space-y-1">
+              <div class="flex justify-between text-zinc-400">
+                <span>Efectivo Esperado en Gaveta:</span>
+                <span class="font-mono font-bold text-white">{{ turnoACerrar()?.efectivoEnGavetaEsperado | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
+              </div>
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="block text-xs font-bold text-zinc-300">Efectivo Físico Contado</label>
+              <input 
+                type="number" 
+                [(ngModel)]="efectivoContado" 
+                class="w-full h-11 bg-[#111111] border border-zinc-700 rounded-xl px-3 font-mono text-lg font-bold text-white focus:border-red-500 focus:outline-none" 
+                placeholder="0.00" />
+            </div>
+
+            @if (calcularDiferencia() !== 0) {
+              <div 
+                class="text-xs font-bold p-2 rounded-lg text-center"
+                [ngClass]="calcularDiferencia() > 0 ? 'bg-sky-950/50 text-sky-400' : 'bg-red-950/50 text-red-400'">
+                Diferencia: {{ calcularDiferencia() > 0 ? '+' : '' }}{{ calcularDiferencia() | currency:'MXN':'symbol-narrow':'1.2-2' }}
+                ({{ calcularDiferencia() > 0 ? 'Sobrante' : 'Faltante' }})
+              </div>
+            }
+
+            <div class="flex items-center gap-2 pt-3 border-t border-zinc-800">
+              <button 
+                (click)="cerrarModalCierre()" 
+                class="flex-1 py-2.5 rounded-xl bg-[#222222] hover:bg-zinc-800 text-zinc-300 text-xs font-bold transition-all">
+                Cancelar
+              </button>
+              <button 
+                (click)="confirmarCierreTurno()" 
+                [disabled]="isClosingTurno() || efectivoContado === null"
+                class="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all disabled:opacity-50">
+                {{ isClosingTurno() ? 'Cerrando...' : 'Confirmar Corte' }}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      }
+
     </div>
   `,
 })
@@ -252,23 +317,38 @@ export class AdminCajaComponent implements OnInit, OnDestroy {
   private realtimeService = inject(RealtimeService);
   private apiUrl = 'http://localhost:3000/api/v1/turnos';
   private sub = new Subscription();
+  private pollingInterval: any = null;
 
   data = signal<any | null>(null);
   feedback = signal<string | null>(null);
   isAssigning = signal(false);
+
+  // Estados del Modal de Cierre
+  isCierreModalOpen = signal(false);
+  turnoACerrar = signal<any | null>(null);
+  efectivoContado: number | null = null;
+  isClosingTurno = signal(false);
 
   selectedMeseroId = '';
   fondoAsignar = 500;
 
   ngOnInit(): void {
     this.cargarMonitoreo();
+    
     this.sub.add(
-      this.realtimeService.onCajaActualizada().subscribe(() => this.cargarMonitoreo()),
+      this.realtimeService.onCajaActualizada().subscribe(() => {
+        this.cargarMonitoreo();
+      }),
     );
+
+    this.pollingInterval = setInterval(() => {
+      this.cargarMonitoreo();
+    }, 10000);
   }
 
   ngOnDestroy(): void {
     this.sub.unsubscribe();
+    if (this.pollingInterval) clearInterval(this.pollingInterval);
   }
 
   cargarMonitoreo(): void {
@@ -300,5 +380,48 @@ export class AdminCajaComponent implements OnInit, OnDestroy {
           this.isAssigning.set(false);
         },
       });
+  }
+
+  // --- Lógica para Cerrar Turno ---
+  abrirModalCierre(turno: any): void {
+    this.turnoACerrar.set(turno);
+    this.efectivoContado = null; // Resetear el input
+    this.isCierreModalOpen.set(true);
+  }
+
+  cerrarModalCierre(): void {
+    this.isCierreModalOpen.set(false);
+    this.turnoACerrar.set(null);
+  }
+
+  calcularDiferencia(): number {
+    const esperado = this.turnoACerrar()?.efectivoEnGavetaEsperado || 0;
+    const contado = this.efectivoContado || 0;
+    return Number((contado - esperado).toFixed(2));
+  }
+
+  confirmarCierreTurno(): void {
+    const turno = this.turnoACerrar();
+    if (!turno || this.efectivoContado === null) return;
+
+    this.isClosingTurno.set(true);
+
+    // 🛠️ CORRECCIÓN: Se usa .post() para coincidir con la ruta del backend
+    this.http.post<{ message: string }>(`${this.apiUrl}/${turno.id}/cerrar`, {
+      efectivoContado: this.efectivoContado,
+      notasCierre: this.calcularDiferencia() !== 0 ? 'Cierre con diferencia' : 'Cuadre perfecto'
+    }).subscribe({
+      next: (res) => {
+        this.isClosingTurno.set(false);
+        this.cerrarModalCierre();
+        this.feedback.set(res.message);
+        this.cargarMonitoreo(); // Refresca la pantalla
+        setTimeout(() => this.feedback.set(null), 4000);
+      },
+      error: (err) => {
+        this.isClosingTurno.set(false);
+        alert(err?.error?.message || 'Error al cerrar el turno');
+      }
+    });
   }
 }
