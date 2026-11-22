@@ -15,8 +15,15 @@
   </nav>
 }
 
-<!-- El main cambia si es login (pantalla completa) o si es panel privado (fondo oscuro) -->
-<main [class]="router.url.includes('/login') || !isPublicView ? 'fixed inset-0 h-dvh w-full overflow-hidden bg-[#0d0d0d]' : 'min-h-screen bg-gray-50'">
+<!-- 
+  El main cambia según la ruta:
+  - Login: pantalla completa sin scroll.
+  - Paneles privados (POS, Cocina, Admin): fondo oscuro y scroll vertical activado.
+  - Público: fondo claro y altura automática.
+-->
+<main [class]="router.url.includes('/login') 
+  ? 'fixed inset-0 h-dvh w-full overflow-hidden bg-[#0d0d0d]' 
+  : (!isPublicView ? 'min-h-screen h-full bg-[#0d0d0d] overflow-y-auto' : 'min-h-screen bg-gray-50')">
   <router-outlet></router-outlet>
 </main>
 
