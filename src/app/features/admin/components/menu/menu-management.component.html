@@ -510,7 +510,8 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- Fila de 3 columnas para Precio, Tiempo y URL -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Precio (MXN)</label>
               <input 
@@ -520,6 +521,18 @@
                 [(ngModel)]="prodForm.precio" 
                 name="prodPrecio"
                 placeholder="145.00"
+                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-red-500" />
+            </div>
+
+            <!-- NUEVO CAMPO DE TIEMPO -->
+            <div>
+              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Tiempo Prep. (Min)</label>
+              <input 
+                type="number" 
+                min="1"
+                [(ngModel)]="prodForm.tiempoPreparacionMinutos" 
+                name="prodTiempo"
+                placeholder="15"
                 class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-red-500" />
             </div>
 

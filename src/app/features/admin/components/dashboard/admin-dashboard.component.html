@@ -49,7 +49,7 @@
     <!-- Controles de sesión -->
     <div class="flex items-center gap-2">
       
-      <!-- 📄 NUEVO: Botón de descarga PDF -->
+      <!-- 📄 Botón de descarga PDF -->
       <button 
         type="button"
         (click)="descargarReportePDF()"
@@ -255,39 +255,50 @@
           </div>
         </div>
 
-        <!-- Desglose Comedor vs Para Llevar + Stock Bajo -->
+        <!-- Desglose Comedor vs Para Llevar vs Móvil + Stock Bajo -->
         <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-5 flex flex-col justify-between space-y-5">
           <div class="space-y-3">
             <div>
               <h2 class="font-bold text-sm text-white">Distribución por Canal</h2>
-              <p class="text-[11px] text-zinc-400">Comedor vs Servicio Para Llevar</p>
+              <p class="text-[11px] text-zinc-400">Comedor, Para Llevar y Móvil</p>
             </div>
 
-            <!-- Barra proporcional -->
+            <!-- Barra proporcional ajustada para 3 canales -->
             <div class="w-full h-3 rounded-full bg-zinc-800 overflow-hidden flex">
               <div class="bg-[#ab2424] h-full transition-all" [style.width.%]="porcentajeComedor()"></div>
-              <div class="bg-sky-500 h-full transition-all" [style.width.%]="100 - porcentajeComedor()"></div>
+              <div class="bg-sky-500 h-full transition-all" [style.width.%]="porcentajeLlevar()"></div>
+              <div class="bg-purple-500 h-full transition-all" [style.width.%]="porcentajeMovil()"></div>
             </div>
 
-            <div class="grid grid-cols-2 gap-2 pt-1">
-              <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3">
-                <div class="text-[11px] text-zinc-400 flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-[#ab2424]"></span> Comedor
+            <div class="grid grid-cols-3 gap-2 pt-1">
+              <div class="bg-[#111111] border border-zinc-800 rounded-xl p-2.5">
+                <div class="text-[10px] text-zinc-400 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-[#ab2424]"></span> Comedor
                 </div>
-                <div class="font-mono font-bold text-sm text-white mt-1">
+                <div class="font-mono font-bold text-xs text-white mt-1 truncate">
                   {{ metrics()!.porCanal.comedor.total | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 </div>
-                <div class="text-[10px] text-zinc-500">{{ metrics()!.porCanal.comedor.ordenes }} órdenes</div>
+                <div class="text-[9px] text-zinc-500">{{ metrics()!.porCanal.comedor.ordenes }} ord.</div>
               </div>
 
-              <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3">
-                <div class="text-[11px] text-zinc-400 flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-sky-500"></span> Para Llevar
+              <div class="bg-[#111111] border border-zinc-800 rounded-xl p-2.5">
+                <div class="text-[10px] text-zinc-400 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span> Llevar
                 </div>
-                <div class="font-mono font-bold text-sm text-white mt-1">
+                <div class="font-mono font-bold text-xs text-white mt-1 truncate">
                   {{ metrics()!.porCanal.llevar.total | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 </div>
-                <div class="text-[10px] text-zinc-500">{{ metrics()!.porCanal.llevar.ordenes }} órdenes</div>
+                <div class="text-[9px] text-zinc-500">{{ metrics()!.porCanal.llevar.ordenes }} ord.</div>
+              </div>
+
+              <div class="bg-[#111111] border border-zinc-800 rounded-xl p-2.5">
+                <div class="text-[10px] text-zinc-400 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span> Móvil
+                </div>
+                <div class="font-mono font-bold text-xs text-white mt-1 truncate">
+                  {{ metrics()!.porCanal.movil.total | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                </div>
+                <div class="text-[9px] text-zinc-500">{{ metrics()!.porCanal.movil.ordenes }} ord.</div>
               </div>
             </div>
           </div>
@@ -416,6 +427,55 @@
           }
         </div>
 
+      </section>
+
+      <!-- ==================== NUEVO: REPORTE DE DESEMPEÑO POR MESERO ==================== -->
+      <section class="bg-[#181818] border border-zinc-800 rounded-2xl p-5 space-y-4">
+        <div>
+          <h2 class="font-bold text-sm text-white">👨‍🍳 Desempeño por Mesero</h2>
+          <p class="text-[11px] text-zinc-400">Ranking de ventas y cancelaciones por empleado en el periodo</p>
+        </div>
+
+        @if (metrics()!.ventasPorMesero.length === 0) {
+          <div class="py-10 text-center text-xs text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
+            Aún no hay registros de ventas por mesero en este periodo.
+          </div>
+        } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr class="bg-[#111111] border-b border-zinc-800 text-zinc-400 uppercase text-[10px] sm:text-xs tracking-wider">
+                  <th class="py-3 px-4 font-semibold">Mesero</th>
+                  <th class="py-3 px-4 font-semibold text-right">Ventas Totales</th>
+                  <th class="py-3 px-4 font-semibold text-center">Órdenes Pagadas</th>
+                  <th class="py-3 px-4 font-semibold text-center text-red-400">Canceladas</th>
+                  <th class="py-3 px-4 font-semibold text-right text-red-400">Monto Cancelado</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-zinc-800/60">
+                @for (m of metrics()!.ventasPorMesero; track m.meseroId) {
+                  <tr class="hover:bg-[#1c1c1c]/50 transition-colors">
+                    <td class="py-3 px-4">
+                      <div class="font-bold text-white">{{ m.nombre }}</div>
+                    </td>
+                    <td class="py-3 px-4 text-right font-mono font-bold text-emerald-400">
+                      {{ m.ventasTotales | currency:'MXN':'symbol-narrow':'1.2-2' }}
+                    </td>
+                    <td class="py-3 px-4 text-center font-mono text-zinc-300">
+                      {{ m.ordenesPagadas }}
+                    </td>
+                    <td class="py-3 px-4 text-center font-mono" [ngClass]="m.ordenesCanceladas > 0 ? 'text-red-400 font-bold' : 'text-zinc-500'">
+                      {{ m.ordenesCanceladas }}
+                    </td>
+                    <td class="py-3 px-4 text-right font-mono" [ngClass]="m.montoCancelado > 0 ? 'text-red-400' : 'text-zinc-500'">
+                      {{ m.montoCancelado | currency:'MXN':'symbol-narrow':'1.2-2' }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
       </section>
 
     }

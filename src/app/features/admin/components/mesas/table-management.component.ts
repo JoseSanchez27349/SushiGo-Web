@@ -20,28 +20,16 @@ export class TableManagementComponent implements OnInit {
   errorMessage = signal<string>('');
   successMessage = signal<string>('');
 
-  readonly estadosDisponibles: EstadoMesa[] = [
-    'disponible',
-    'ocupada',
-    'reservada',
-    'mantenimiento'
-  ];
+  // Solo estos dos estados
+  readonly estadosDisponibles: EstadoMesa[] = ['disponible', 'ocupada'];
 
-  // Contadores reactivos
   disponiblesCount = computed(() =>
     this.mesas().filter(m => m.estado === 'disponible').length
   );
   ocupadasCount = computed(() =>
     this.mesas().filter(m => m.estado === 'ocupada').length
   );
-  reservadasCount = computed(() =>
-    this.mesas().filter(m => m.estado === 'reservada').length
-  );
-  mantenimientoCount = computed(() =>
-    this.mesas().filter(m => m.estado === 'mantenimiento').length
-  );
 
-  // Modal Nueva Mesa
   isModalOpen = signal<boolean>(false);
   mesaForm = {
     numeroMesa: '',
@@ -67,7 +55,9 @@ export class TableManagementComponent implements OnInit {
   }
 
   formatMesaTitle(numeroMesa: string): string {
-    return /^\d+$/.test(numeroMesa.trim()) ? `Mesa ${numeroMesa}` : numeroMesa;
+    if (!numeroMesa) return 'Mesa';
+    const num = String(numeroMesa).trim();
+    return /^\d+$/.test(num) ? `Mesa ${num}` : num;
   }
 
   getTotalActivoMesa(mesa: Mesa): number {
@@ -77,10 +67,7 @@ export class TableManagementComponent implements OnInit {
 
   openCreateModal(): void {
     const sugerido = String(this.mesas().length + 1);
-    this.mesaForm = {
-      numeroMesa: sugerido,
-      capacidad: 4
-    };
+    this.mesaForm = { numeroMesa: sugerido, capacidad: 4 };
     this.errorMessage.set('');
     this.isModalOpen.set(true);
   }
@@ -123,16 +110,17 @@ export class TableManagementComponent implements OnInit {
     });
   }
 
-  onChangeEstado(mesa: Mesa, nuevoEstado: string): void {
+  // 🛠️ CORRECCIÓN: Cambiamos updateEstadoMesa por cambiarEstadoMesa (el nombre real en el servicio)
+  onChangeEstado(mesa: Mesa, nuevoEstado: EstadoMesa): void {
     if (mesa.estado === nuevoEstado) return;
 
-    this.tableService.cambiarEstadoMesa(mesa.id, nuevoEstado as EstadoMesa).subscribe({
-      next: (res) => {
-        this.successMessage.set(res.message);
+    this.tableService.cambiarEstadoMesa(mesa.id, nuevoEstado).subscribe({
+      next: () => {
+        this.successMessage.set(`Mesa ${mesa.numeroMesa} actualizada a ${nuevoEstado}`);
         this.loadMesas();
       },
       error: (err) => {
-        this.errorMessage.set(err.error?.message || 'No se pudo actualizar el estado de la mesa');
+        this.errorMessage.set(err.error?.message || 'Error al actualizar mesa');
       }
     });
   }

@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { MenuService } from '../../../../core/services/menu.service';
 import { Category, Product } from '../../../../core/models/menu.model';
 import { ProductRecipeResponse } from '../../../../core/models/inventory.model';
-import  { InventoryService } from '../../../../core/services/inventory.service';
+import { InventoryService } from '../../../../core/services/inventory.service';
 
 @Component({
   selector: 'app-menu-management',
@@ -17,15 +17,11 @@ export class MenuManagementComponent implements OnInit {
   private menuService = inject(MenuService);
   private inventoryService = inject(InventoryService);
 
-  // Pestaña activa
   activeTab = signal<'productos' | 'categorias'>('productos');
-
-  // Datos principales
   categorias = signal<Category[]>([]);
   productos = signal<Product[]>([]);
   selectedCategoryFilter = signal<number | null>(null);
 
-  // Productos filtrados reactivamente
   filteredProductos = computed(() => {
     const catId = this.selectedCategoryFilter();
     const list = this.productos();
@@ -33,22 +29,15 @@ export class MenuManagementComponent implements OnInit {
     return list.filter(p => p.categoriaId === catId);
   });
 
-  // Estados de carga y alertas
   isLoading = signal<boolean>(false);
   isSaving = signal<boolean>(false);
   errorMessage = signal<string>('');
   successMessage = signal<string>('');
 
-  // Modal Categoría
   isCatModalOpen = signal<boolean>(false);
   editingCategory = signal<Category | null>(null);
-  catForm = {
-    nombre: '',
-    descripcion: '',
-    estaActiva: true
-  };
+  catForm = { nombre: '', descripcion: '', estaActiva: true };
 
-  // Modal Producto
   isProdModalOpen = signal<boolean>(false);
   editingProduct = signal<Product | null>(null);
   prodForm = {
@@ -57,10 +46,10 @@ export class MenuManagementComponent implements OnInit {
     descripcion: '',
     precio: 0,
     urlImagen: '',
-    estaDisponible: true
+    estaDisponible: true,
+    tiempoPreparacionMinutos: 15 // 👈 NUEVO
   };
 
-  // Modal Ver Receta (BOM)
   isRecipeModalOpen = signal<boolean>(false);
   isLoadingRecipe = signal<boolean>(false);
   selectedRecipeData = signal<ProductRecipeResponse | null>(null);
@@ -96,8 +85,6 @@ export class MenuManagementComponent implements OnInit {
     });
   }
 
-  // ==================== VER RECETA DEL PRODUCTO ====================
-
   openRecipeModal(prod: Product): void {
     this.errorMessage.set('');
     this.selectedRecipeData.set(null);
@@ -125,8 +112,6 @@ export class MenuManagementComponent implements OnInit {
   hasEnoughStock(stockActual: number | string, cantidadRequerida: number | string): boolean {
     return Number(stockActual) >= Number(cantidadRequerida);
   }
-
-  // ==================== ACCIONES CATEGORÍAS ====================
 
   openCreateCategoryModal(): void {
     this.editingCategory.set(null);
@@ -214,8 +199,6 @@ export class MenuManagementComponent implements OnInit {
     });
   }
 
-  // ==================== ACCIONES PRODUCTOS ====================
-
   openCreateProductModal(): void {
     if (this.categorias().length === 0) {
       this.errorMessage.set('Primero debes crear al menos una categoría');
@@ -229,7 +212,8 @@ export class MenuManagementComponent implements OnInit {
       descripcion: '',
       precio: 0,
       urlImagen: '',
-      estaDisponible: true
+      estaDisponible: true,
+      tiempoPreparacionMinutos: 15 // 👈 NUEVO
     };
     this.errorMessage.set('');
     this.isProdModalOpen.set(true);
@@ -243,7 +227,8 @@ export class MenuManagementComponent implements OnInit {
       descripcion: prod.descripcion || '',
       precio: Number(prod.precio),
       urlImagen: prod.urlImagen || '',
-      estaDisponible: prod.estaDisponible
+      estaDisponible: prod.estaDisponible,
+      tiempoPreparacionMinutos: (prod as any).tiempoPreparacionMinutos || 15 // 👈 NUEVO
     };
     this.errorMessage.set('');
     this.isProdModalOpen.set(true);
@@ -275,7 +260,8 @@ export class MenuManagementComponent implements OnInit {
       descripcion: this.prodForm.descripcion.trim() || undefined,
       precio: Number(this.prodForm.precio),
       urlImagen: this.prodForm.urlImagen.trim() || undefined,
-      estaDisponible: this.prodForm.estaDisponible
+      estaDisponible: this.prodForm.estaDisponible,
+      tiempoPreparacionMinutos: Number(this.prodForm.tiempoPreparacionMinutos) // 👈 NUEVO
     };
 
     if (current) {

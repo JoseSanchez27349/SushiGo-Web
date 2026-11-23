@@ -1,16 +1,16 @@
 <div class="p-4 sm:p-6 bg-[#0d0d0d] min-h-screen text-white font-sans select-none">
-
-  <!-- Navegación Superior -->
-  <div class="mb-4 flex items-center justify-between">
-    <a routerLink="/admin" class="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors">
-      ← Volver al Panel Admin
-    </a>
-    <a routerLink="/pos" class="inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 font-semibold transition-colors">
-      Ir al Terminal POS →
+  
+  <!-- Botón para volver al dashboard -->
+  <div class="mb-4">
+    <a 
+      routerLink="/admin" 
+      class="inline-flex items-center gap-2 text-zinc-400 hover:text-white text-xs font-semibold transition-colors bg-[#181818] hover:bg-[#222222] border border-zinc-800 px-3 py-1.5 rounded-lg w-fit">
+      <span>←</span>
+      <span>Volver al Panel Admin</span>
     </a>
   </div>
 
-  <!-- Encabezado y Botón Principal -->
+  <!-- Encabezado del Módulo -->
   <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
     <div>
       <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Gestión de Mesas y Salón</h1>
@@ -18,140 +18,113 @@
     </div>
 
     <div class="flex items-center gap-2">
+      <a 
+        routerLink="/pos"
+        class="bg-[#222222] hover:bg-zinc-700 text-zinc-200 text-xs font-bold px-3 py-2.5 rounded-xl border border-zinc-700 transition-all flex items-center gap-2">
+        Ir al Terminal POS →
+      </a>
       <button 
-        type="button"
-        (click)="loadMesas()"
-        title="Actualizar estado de mesas"
-        class="bg-[#181818] hover:bg-zinc-800 active:scale-95 text-zinc-300 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-zinc-800 transition-all">
-        🔄
-      </button>
-
-      <button 
-        type="button"
         (click)="openCreateModal()"
         class="bg-[#ab2424] hover:bg-[#961e1e] active:scale-95 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2">
-        <span>+ Nueva Mesa</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        <span>Nueva Mesa</span>
       </button>
     </div>
   </div>
 
-  <!-- Alertas -->
+  <!-- Alertas de Estado -->
   @if (successMessage()) {
     <div class="mb-4 bg-emerald-950/80 border border-emerald-600/50 text-emerald-200 px-4 py-2.5 rounded-xl text-xs sm:text-sm flex justify-between items-center">
       <span>{{ successMessage() }}</span>
-      <button type="button" (click)="successMessage.set('')" class="text-emerald-400 font-bold text-base">&times;</button>
+      <button (click)="successMessage.set('')" class="text-emerald-400 font-bold">&times;</button>
     </div>
   }
 
-  @if (errorMessage() && !isModalOpen()) {
+  @if (errorMessage()) {
     <div class="mb-4 bg-red-950/80 border border-red-600/50 text-red-200 px-4 py-2.5 rounded-xl text-xs sm:text-sm flex justify-between items-center">
       <span>{{ errorMessage() }}</span>
-      <button type="button" (click)="errorMessage.set('')" class="text-red-400 font-bold text-base">&times;</button>
+      <button (click)="errorMessage.set('')" class="text-red-400 font-bold">&times;</button>
     </div>
   }
 
-  <!-- Tarjetas Resumen de Ocupación -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-    <div class="bg-[#181818] border border-emerald-500/20 rounded-2xl p-4">
-      <div class="text-[11px] text-emerald-400 uppercase font-semibold">Disponibles</div>
-      <div class="font-mono font-black text-2xl text-emerald-400 mt-1">{{ disponiblesCount() }}</div>
+  <!-- Contadores de Estado (Solo Disponible y Ocupada) -->
+  <div class="grid grid-cols-2 gap-3 mb-6 max-w-md">
+    <div class="bg-[#181818] border border-zinc-800 rounded-xl p-4">
+      <div class="text-[11px] text-emerald-400 uppercase font-bold mb-1">Disponibles</div>
+      <div class="font-mono font-black text-2xl text-white">{{ disponiblesCount() }}</div>
     </div>
-
-    <div class="bg-[#181818] border border-amber-500/20 rounded-2xl p-4">
-      <div class="text-[11px] text-amber-400 uppercase font-semibold">Ocupadas</div>
-      <div class="font-mono font-black text-2xl text-amber-400 mt-1">{{ ocupadasCount() }}</div>
-    </div>
-
-    <div class="bg-[#181818] border border-sky-500/20 rounded-2xl p-4">
-      <div class="text-[11px] text-sky-400 uppercase font-semibold">Reservadas</div>
-      <div class="font-mono font-black text-2xl text-sky-400 mt-1">{{ reservadasCount() }}</div>
-    </div>
-
-    <div class="bg-[#181818] border border-zinc-700/60 rounded-2xl p-4">
-      <div class="text-[11px] text-zinc-400 uppercase font-semibold">Mantenimiento</div>
-      <div class="font-mono font-black text-2xl text-zinc-300 mt-1">{{ mantenimientoCount() }}</div>
+    <div class="bg-[#181818] border border-zinc-800 rounded-xl p-4">
+      <div class="text-[11px] text-amber-400 uppercase font-bold mb-1">Ocupadas</div>
+      <div class="font-mono font-black text-2xl text-white">{{ ocupadasCount() }}</div>
     </div>
   </div>
 
-  <!-- Grid Visual de Mesas -->
+  <!-- Grid de Mesas -->
   @if (isLoading()) {
-    <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-12 text-center text-zinc-400 text-sm flex flex-col items-center gap-2">
-      <span class="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></span>
-      <span>Cargando mapa de mesas...</span>
+    <div class="py-24 flex flex-col items-center justify-center text-zinc-400 text-sm gap-2">
+      <span class="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></span>
+      <span>Cargando distribución del salón...</span>
     </div>
   } @else if (mesas().length === 0) {
-    <div class="bg-[#181818] border border-dashed border-zinc-800 rounded-2xl p-12 text-center space-y-3">
-      <p class="text-sm font-semibold text-zinc-300">No hay mesas configuradas aún</p>
-      <p class="text-xs text-zinc-500">Crea tus mesas para que los meseros puedan asignar comandas de comedor en el POS.</p>
-      <button 
-        type="button"
-        (click)="openCreateModal()"
-        class="px-4 py-2 bg-[#ab2424] hover:bg-[#961e1e] text-white text-xs font-bold rounded-xl transition-all">
-        + Crear Primera Mesa
-      </button>
+    <div class="bg-[#181818] border border-dashed border-zinc-800 rounded-2xl p-16 text-center space-y-2">
+      <div class="text-4xl">🪑</div>
+      <h2 class="text-base font-bold text-zinc-200">No hay mesas registradas</h2>
+      <p class="text-xs text-zinc-500">Haz clic en "Nueva Mesa" para empezar a configurar tu salón.</p>
     </div>
   } @else {
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       @for (mesa of mesas(); track mesa.id) {
-        <div 
-          class="bg-[#181818] border rounded-2xl p-4 flex flex-col justify-between shadow-lg transition-all"
-          [ngClass]="{
-            'border-emerald-500/30': mesa.estado === 'disponible',
-            'border-amber-500/40': mesa.estado === 'ocupada',
-            'border-sky-500/30': mesa.estado === 'reservada',
-            'border-zinc-700/70 opacity-80': mesa.estado === 'mantenimiento'
-          }">
+        <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-4 space-y-3 relative overflow-hidden">
           
-          <div>
-            <!-- Cabecera de la Mesa -->
-            <div class="flex items-start justify-between gap-2 mb-2.5">
-              <div>
-                <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">ID #{{ mesa.id }}</span>
-                <h2 class="text-lg font-black text-white">{{ formatMesaTitle(mesa.numeroMesa) }}</h2>
-              </div>
-
-              <span 
-                class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border"
-                [ngClass]="{
-                  'bg-emerald-950/70 text-emerald-400 border-emerald-500/30': mesa.estado === 'disponible',
-                  'bg-amber-950/70 text-amber-300 border-amber-500/40': mesa.estado === 'ocupada',
-                  'bg-sky-950/70 text-sky-300 border-sky-500/30': mesa.estado === 'reservada',
-                  'bg-zinc-800 text-zinc-400 border-zinc-700': mesa.estado === 'mantenimiento'
-                }">
-                {{ mesa.estado }}
-              </span>
-            </div>
-
-            <!-- Capacidad -->
-            <div class="text-xs text-zinc-400 flex items-center gap-1.5 mb-3">
-              <span>👥</span>
-              <span>Capacidad: <strong class="text-zinc-200">{{ mesa.capacidad }} personas</strong></span>
-            </div>
-
-            <!-- Órdenes Activas en la Mesa -->
-            @if (mesa.ordenes && mesa.ordenes.length > 0) {
-              <div class="mb-3 bg-[#111111] border border-amber-500/25 rounded-xl p-2.5 space-y-1.5">
-                <div class="flex items-center justify-between text-[10px] uppercase font-bold text-amber-400">
-                  <span>{{ mesa.ordenes.length }} {{ mesa.ordenes.length === 1 ? 'orden activa' : 'órdenes activas' }}</span>
-                  <span class="font-mono text-emerald-400">
-                    {{ getTotalActivoMesa(mesa) | currency:'MXN':'symbol-narrow':'1.2-2' }}
-                  </span>
-                </div>
-                @for (ord of mesa.ordenes; track ord.id) {
-                  <div class="flex items-center justify-between text-[11px] text-zinc-300 border-t border-zinc-800/80 pt-1">
-                    <span class="font-mono text-zinc-400">{{ ord.folio || ('#' + ord.id) }}</span>
-                    <span class="capitalize text-amber-300">{{ ord.estado }}</span>
-                  </div>
-                }
-              </div>
-            }
+          <!-- Indicador de color superior -->
+          <div 
+            class="absolute top-0 left-0 w-full h-1"
+            [ngClass]="mesa.estado === 'disponible' ? 'bg-emerald-500' : 'bg-amber-500'">
           </div>
 
-          <!-- Selector rápido de estado -->
-          <div class="pt-3 border-t border-zinc-800/80 space-y-2">
-            <label class="block text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">
-              Cambiar estado
-            </label>
+          <div class="flex items-center justify-between pt-1">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] text-zinc-500 font-mono">ID #{{ mesa.id }}</span>
+            </div>
+            <span 
+              class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider"
+              [ngClass]="mesa.estado === 'disponible' 
+                ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30' 
+                : 'bg-amber-950/80 text-amber-400 border border-amber-500/30'">
+              {{ mesa.estado }}
+            </span>
+          </div>
+
+          <div>
+            <h3 class="font-bold text-lg text-white">{{ formatMesaTitle(mesa.numeroMesa) }}</h3>
+            <div class="flex items-center gap-1.5 text-xs text-zinc-400 mt-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              <span>Capacidad: {{ mesa.capacidad }} personas</span>
+            </div>
+          </div>
+
+          <!-- Información de cuenta abierta (si la hay) -->
+          @if (mesa.estado === 'ocupada' && getTotalActivoMesa(mesa) > 0) {
+            <div class="bg-[#111111] border border-zinc-800/80 rounded-lg p-2.5 space-y-1">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-zinc-400">Cuenta actual:</span>
+                <span class="font-mono font-bold text-emerald-400">{{ getTotalActivoMesa(mesa) | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
+              </div>
+              <!-- Aquí podrías agregar un botón para ver el detalle de la orden -->
+            </div>
+          } @else {
+            <div class="bg-[#111111] border border-zinc-800/80 rounded-lg p-2.5 flex items-center justify-center h-[42px]">
+              <span class="text-[11px] text-zinc-500 italic">Sin cuentas abiertas</span>
+            </div>
+          }
+
+          <!-- Selector de Estado -->
+          <div class="pt-2">
+            <label class="block text-[10px] font-semibold text-zinc-400 uppercase mb-1">Cambiar Estado</label>
             <select 
               [ngModel]="mesa.estado"
               (ngModelChange)="onChangeEstado(mesa, $event)"
@@ -169,29 +142,30 @@
 
   <!-- ==================== MODAL NUEVA MESA ==================== -->
   @if (isModalOpen()) {
-    <div (click)="closeModal()" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div (click)="$event.stopPropagation()" class="bg-[#181818] border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+    <div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-[#181818] border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
         
-        <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
-          <h2 class="text-base font-bold text-white">Nueva Mesa</h2>
-          <button type="button" (click)="closeModal()" class="text-zinc-400 hover:text-white text-xl font-bold">&times;</button>
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-4 mb-4">
+          <h2 class="text-base sm:text-lg font-bold text-white">Registrar Nueva Mesa</h2>
+          <button (click)="closeModal()" class="text-zinc-400 hover:text-white text-xl font-bold p-1">&times;</button>
         </div>
 
         @if (errorMessage()) {
-          <div class="mb-3 bg-red-950/80 border border-red-600/50 text-red-200 px-3 py-2 rounded-xl text-xs">
+          <div class="mb-4 bg-red-950/80 border border-red-600/50 text-red-200 px-3 py-2 rounded-xl text-xs">
             {{ errorMessage() }}
           </div>
         }
 
-        <form (submit)="$event.preventDefault(); saveMesa()" class="space-y-3.5">
+        <form (submit)="$event.preventDefault(); saveMesa()" class="space-y-4">
           <div>
-            <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Número o Nombre de Mesa</label>
+            <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Número o Identificador</label>
             <input 
               type="text" 
               [(ngModel)]="mesaForm.numeroMesa" 
-              name="numeroMesa"
-              placeholder="Ej. 1, 2, Terraza 1, Barra 3"
+              name="numeroMesa" 
+              placeholder="Ej. 1, Terraza A, Barra 2"
               class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white text-sm focus:outline-none focus:border-red-500" />
+            <p class="text-[10px] text-zinc-500 mt-1">Si pones un número, se mostrará como "Mesa 1".</p>
           </div>
 
           <div>
@@ -199,18 +173,27 @@
             <input 
               type="number" 
               min="1"
-              max="30"
               [(ngModel)]="mesaForm.capacidad" 
-              name="mesaCapacidad"
+              name="capacidad" 
               class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white font-mono text-sm focus:outline-none focus:border-red-500" />
           </div>
 
-          <div class="flex justify-end gap-2 pt-4 border-t border-zinc-800">
-            <button type="button" (click)="closeModal()" class="px-4 py-2 bg-[#222222] text-zinc-300 text-xs font-semibold rounded-xl">
+          <div class="flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+            <button 
+              type="button" 
+              (click)="closeModal()"
+              class="px-4 py-2 bg-[#222222] hover:bg-zinc-800 text-zinc-300 font-semibold text-xs rounded-xl transition-all">
               Cancelar
             </button>
-            <button type="submit" [disabled]="isSaving()" class="px-5 py-2 bg-[#ab2424] hover:bg-[#961e1e] text-white text-xs font-bold rounded-xl">
-              {{ isSaving() ? 'Guardando...' : 'Crear Mesa' }}
+
+            <button 
+              type="submit" 
+              [disabled]="isSaving()"
+              class="px-5 py-2 bg-[#ab2424] hover:bg-[#961e1e] text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center gap-2">
+              @if (isSaving()) {
+                <span class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              }
+              <span>Guardar Mesa</span>
             </button>
           </div>
         </form>
