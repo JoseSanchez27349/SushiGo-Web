@@ -103,56 +103,50 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
   private sub = new Subscription();
   private timerInterval: any = null;
 
-  // Reloj reactivo para cronómetros de órdenes en vivo
   nowTick = signal<number>(Date.now());
-
-  // Estado de conexión y usuario
   socketConnected = signal<boolean>(true);
   soundEnabled = signal<boolean>(true);
   isLoading = signal<boolean>(true);
   isSubmitting = signal<boolean>(false);
 
-  // Control de Turno y Caja
   isTurnoModalOpen = signal<boolean>(false);
   turnoActivo = signal<any | null>(null);
 
-  // Catálogo y mesas
   categorias = signal<PosCategory[]>([]);
   productos = signal<PosProduct[]>([]);
   mesas = signal<PosTable[]>([]);
   selectedCategoryId = signal<number | string | null>(null);
   searchQuery = signal<string>('');
 
-  // Comanda actual
   tipoOrden = signal<'comedor' | 'llevar'>('comedor');
   selectedMesaId = signal<number | string | null>(null);
   cart = signal<CartItem[]>([]);
   ordenNotas = signal<string>('');
   appendTargetOrder = signal<ActiveOrder | null>(null);
 
-  // Órdenes activas / Cuentas abiertas
   ordenesActivas = signal<ActiveOrder[]>([]);
   isOrdersModalOpen = signal<boolean>(false);
   ordersFilter = signal<'todas' | 'sin_iniciar' | 'en_preparacion' | 'listo'>('todas');
 
-  // Cancelación de orden
   cancelTargetOrder = signal<ActiveOrder | null>(null);
   cancelMotivo = signal<string>('');
   isCancelingOrder = signal<boolean>(false);
 
-  // Cobro / Caja
   checkoutOrder = signal<ActiveOrder | null>(null);
   pagosDraft = signal<PagoDraft[]>([]);
   isProcessingPayment = signal<boolean>(false);
   paymentReceipt = signal<PaymentReceipt | null>(null);
   lastPaidOrderId = signal<string | null>(null);
 
-  // Notificaciones flotantes
   feedbackMessage = signal<string>('');
   feedbackType = signal<'success' | 'warning' | 'error'>('success');
   private feedbackTimeout: any = null;
 
-  // Usuario autenticado
+  // 🛠️ Signals para el historial del mesero
+  isHistorialModalOpen = signal<boolean>(false);
+  historialMesero = signal<any[]>([]);
+  isLoadingHistorial = signal<boolean>(false);
+
   user = computed(() => {
     const authUser =
       (this.authService as any).currentUser?.() ||
@@ -406,8 +400,6 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ==================== GESTIÓN DE COMANDA ====================
-
   isProductAvailable(prod: PosProduct): boolean {
     if (!prod.estaDisponible) return false;
     if (prod.disponibleParaVenta === false) return false;
@@ -493,14 +485,14 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
   }
 
   selectMesa(mesa: PosTable): void {
-    if (mesa.estado === 'mantenimiento') return;
+    if (mesa.estado === 'mantenimiento' || mesa.estado === 'reservada') return;
     this.selectedMesaId.set(mesa.id);
   }
 
   getMesaLabel(mesa: PosTable): string {
-    if (mesa.nombre) return mesa.nombre;
+    if (mesa.nombre && mesa.nombre.trim() !== '') return mesa.nombre;
     if (mesa.numero !== undefined && mesa.numero !== null) return `Mesa ${mesa.numero}`;
-    return 'Mesa';
+    return `Mesa ${mesa.id}`;
   }
 
   startAppendToOrder(ord: ActiveOrder): void {
@@ -521,6 +513,15 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
   }
 
   submitOrden(): void {
+    if (!this.turnoActivo()) {
+      this.showFeedback(
+        '⚠️ Debes abrir tu turno de caja antes de enviar comandas. Presiona "Abrir Turno".',
+        'error',
+      );
+      this.isTurnoModalOpen.set(true);
+      return;
+    }
+
     if (this.cart().length === 0 || this.isSubmitting()) return;
 
     if (
@@ -594,8 +595,6 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ==================== CUENTAS ABIERTAS Y ESTADOS COCINA ====================
-
   openOrdersModal(filter: 'todas' | 'sin_iniciar' | 'en_preparacion' | 'listo' = 'todas'): void {
     this.ordersFilter.set(filter);
     this.loadOrdenesActivas();
@@ -648,8 +647,6 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
     return `${mins} min`;
   }
 
-  // ==================== CANCELACIÓN DE ORDEN ====================
-
   openCancelOrderModal(ord: ActiveOrder): void {
     this.cancelTargetOrder.set(ord);
     this.cancelMotivo.set('');
@@ -666,7 +663,6 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
 
     this.isCancelingOrder.set(true);
 
-    // 🛠️ CORRECCIÓN: Se cambió .patch() por .put() para que coincida con el backend
     this.http
       .put(`${this.baseApi}/ordenes/${ord.id}/cancelar`, {
         motivo: this.cancelMotivo().trim(),
@@ -690,8 +686,6 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
         },
       });
   }
-
-  // ==================== COBRO Y TICKETS ====================
 
   openCheckoutModal(ord: ActiveOrder): void {
     if (!this.turnoActivo()) {
@@ -817,8 +811,6 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  // ==================== UTILIDADES UI Y SESIÓN ====================
-
   toggleSound(): void {
     this.soundEnabled.update((v) => !v);
   }
@@ -847,6 +839,29 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
     this.feedbackTimeout = setTimeout(() => {
       this.feedbackMessage.set('');
     }, 4000);
+  }
+
+  // 🛠️ NUEVO: Historial de Cortes del Mesero
+  abrirHistorial(): void {
+    this.isLoadingHistorial.set(true);
+    this.isHistorialModalOpen.set(true);
+    this.historialMesero.set([]);
+
+    this.http.get<{ historial: any[] }>(`${this.baseApi}/turnos/mi-historial`).subscribe({
+      next: (res) => {
+        this.historialMesero.set(res.historial || []);
+        this.isLoadingHistorial.set(false);
+      },
+      error: () => {
+        this.isLoadingHistorial.set(false);
+        this.showFeedback('Error al cargar el historial de cortes', 'error');
+      },
+    });
+  }
+
+  cerrarHistorial(): void {
+    this.isHistorialModalOpen.set(false);
+    this.historialMesero.set([]);
   }
 
   onLogout(): void {

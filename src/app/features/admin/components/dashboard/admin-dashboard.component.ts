@@ -5,8 +5,6 @@ import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
 import { RealtimeService } from '../../../../core/services/realtime.service';
-
-// 📄 Importaciones para el PDF
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -21,16 +19,18 @@ export interface ProductMetricItem {
   muestrasTiempo: number;
 }
 
+export interface MeseroMetricItem {
+  meseroId: string;
+  nombre: string;
+  ventasTotales: number;
+  ordenesPagadas: number;
+  ordenesCanceladas: number;
+  montoCancelado: number;
+}
+
 export interface DashboardMetricsResponse {
   periodo: 'hoy' | 'semana' | 'mes';
-  comparativa: {
-    ventasAnterior: number;
-    crecimientoVentasPorcentaje: number;
-    ordenesAnterior: number;
-    crecimientoOrdenesPorcentaje: number;
-    ticketPromedioAnterior: number;
-    crecimientoTicketPorcentaje: number;
-  };
+  comparativa: any;
   kpis: {
     ventasTotales: number;
     ticketPromedio: number;
@@ -54,43 +54,18 @@ export interface DashboardMetricsResponse {
   porCanal: {
     comedor: { ordenes: number; total: number };
     llevar: { ordenes: number; total: number };
+    movil: { ordenes: number; total: number }; // 🛠️ NUEVO
   };
-  porMetodoPago: {
-    efectivo: { transacciones: number; total: number };
-    tarjeta: { transacciones: number; total: number };
-    transferencia: { transacciones: number; total: number };
-  };
-  ventasPorCategoria: {
-    categoria: string;
-    cantidad: number;
-    total: number;
-    porcentaje: number;
-  }[];
+  porMetodoPago: any;
+  ventasPorCategoria: any[];
   topVendidos: ProductMetricItem[];
   menosVendidos: ProductMetricItem[];
   cuellosBotella: ProductMetricItem[];
-  topMesas: {
-    mesaId: number;
-    numeroMesa: string;
-    ordenes: number;
-    total: number;
-  }[];
-  ventasPorHora: {
-    hora: string;
-    total: number;
-    ordenes: number;
-  }[];
-  ventasPorDia: {
-    fecha: string;
-    total: number;
-    ordenes: number;
-  }[];
-  ingredientesMenorStock: {
-    id: string;
-    nombre: string;
-    stockActual: number;
-    unidadMedida: string;
-  }[];
+  topMesas: any[];
+  ventasPorHora: any[];
+  ventasPorDia: any[];
+  ventasPorMesero: MeseroMetricItem[]; // 🛠️ NUEVO
+  ingredientesMenorStock: any[];
 }
 
 @Component({
@@ -134,12 +109,29 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return max > 0 ? max : 15;
   });
 
+  // 🛠️ Nuevos porcentajes para 3 canales
   porcentajeComedor = computed(() => {
     const m = this.metrics();
-    if (!m) return 50;
-    const suma = m.porCanal.comedor.total + m.porCanal.llevar.total;
-    if (suma <= 0) return 50;
+    if (!m) return 33;
+    const suma = m.porCanal.comedor.total + m.porCanal.llevar.total + m.porCanal.movil.total;
+    if (suma <= 0) return 33;
     return Math.round((m.porCanal.comedor.total / suma) * 100);
+  });
+
+  porcentajeLlevar = computed(() => {
+    const m = this.metrics();
+    if (!m) return 33;
+    const suma = m.porCanal.comedor.total + m.porCanal.llevar.total + m.porCanal.movil.total;
+    if (suma <= 0) return 33;
+    return Math.round((m.porCanal.llevar.total / suma) * 100);
+  });
+
+  porcentajeMovil = computed(() => {
+    const m = this.metrics();
+    if (!m) return 33;
+    const suma = m.porCanal.comedor.total + m.porCanal.llevar.total + m.porCanal.movil.total;
+    if (suma <= 0) return 33;
+    return Math.round((m.porCanal.movil.total / suma) * 100);
   });
 
   totalMetodosPago = computed(() => {
@@ -150,8 +142,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadMetrics(true);
-
-    // Recarga silenciosa en tiempo real ante movimiento en POS o Cocina
     this.realtimeSub.add(
       this.realtimeService.onNuevaComanda().subscribe(() => this.loadMetrics(false)),
     );
@@ -222,23 +212,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     const data = this.metrics();
     if (!data) return;
 
-    // 1. Crear el documento PDF (A4 Vertical, milímetros)
     const doc = new jsPDF('p', 'mm', 'a4');
     const fechaActual = new Date().toLocaleDateString();
 
-    // 2. Título principal
     doc.setFontSize(22);
-    doc.setTextColor(171, 36, 36); // Rojo SushiGo (#ab2424)
+    doc.setTextColor(171, 36, 36);
     doc.text('SushiGo - Reporte Operativo', 14, 20);
 
-    // Subtítulo y período
     doc.setFontSize(11);
     doc.setTextColor(100, 100, 100);
-    doc.text(`Período consultado: ${this.periodo().toUpperCase()}`, 14, 28);
+    doc.text(`Período: ${this.periodo().toUpperCase()}`, 14, 28);
     doc.text(`Fecha de emisión: ${fechaActual}`, 14, 34);
     doc.text(`Usuario: ${this.user()?.nombre || 'Admin'}`, 14, 40);
 
-    // 3. Tabla de Resumen de KPIs
     autoTable(doc, {
       startY: 46,
       head: [['Indicador (KPI)', 'Valor']],
@@ -253,36 +239,37 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         ['Órdenes Canceladas', data.kpis.ordenesCanceladas.toString()],
       ],
       theme: 'grid',
-      headStyles: { fillColor: [24, 24, 24], textColor: [255, 255, 255] }, // Gris oscuro
+      headStyles: { fillColor: [24, 24, 24], textColor: [255, 255, 255] },
       styles: { fontSize: 10 },
     });
 
-    // 4. Tabla de Ventas por Canal
-    const startYPorCanal = (doc as any).lastAutoTable.finalY + 15;
+    const startYMeseros = (doc as any).lastAutoTable.finalY + 15;
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text('Desglose por Canal', 14, startYPorCanal);
+    doc.text('Desempeño por Mesero', 14, startYMeseros);
+
+    const meserosData = data.ventasPorMesero.map((m) => [
+      m.nombre,
+      `$${m.ventasTotales.toFixed(2)}`,
+      m.ordenesPagadas.toString(),
+      m.ordenesCanceladas.toString(),
+      `$${m.montoCancelado.toFixed(2)}`,
+    ]);
 
     autoTable(doc, {
-      startY: startYPorCanal + 5,
-      head: [['Canal', 'Órdenes', 'Total Vendido']],
-      body: [
-        ['Comedor', data.porCanal.comedor.ordenes.toString(), `$${data.porCanal.comedor.total.toFixed(2)}`],
-        ['Para Llevar', data.porCanal.llevar.ordenes.toString(), `$${data.porCanal.llevar.total.toFixed(2)}`],
-      ],
+      startY: startYMeseros + 5,
+      head: [['Mesero', 'Ventas', 'Pagadas', 'Canceladas', 'Monto Cancelado']],
+      body: meserosData,
       theme: 'striped',
-      headStyles: { fillColor: [171, 36, 36] }, // Rojo SushiGo
+      headStyles: { fillColor: [171, 36, 36] },
     });
 
-    // 5. Tabla de Platillos Más Vendidos (Top 10)
-    const topPlatillos = data.topVendidos.slice(0, 10);
     const startYTop = (doc as any).lastAutoTable.finalY + 15;
-    
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
     doc.text('Top 10 Platillos Más Vendidos', 14, startYTop);
 
-    const topData = topPlatillos.map((item, index) => [
+    const topData = data.topVendidos.slice(0, 10).map((item, index) => [
       (index + 1).toString(),
       item.nombre,
       item.categoria,
@@ -298,12 +285,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       headStyles: { fillColor: [171, 36, 36] },
     });
 
-    // 6. Guardar/Descargar el archivo
     const nombreArchivo = `Reporte_SushiGo_${this.periodo()}_${fechaActual.replace(/\//g, '-')}.pdf`;
     doc.save(nombreArchivo);
   }
 
-  // ==================== UTILIDADES ====================
   onLogout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);

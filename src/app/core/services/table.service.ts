@@ -8,7 +8,8 @@ export interface CreateMesaPayload {
   capacidad: number;
 }
 
-export type EstadoMesa = 'disponible' | 'ocupada' | 'reservada' | 'mantenimiento';
+// 🛠️ Solo dejamos disponible y ocupada
+export type EstadoMesa = 'disponible' | 'ocupada';
 
 @Injectable({
   providedIn: 'root'

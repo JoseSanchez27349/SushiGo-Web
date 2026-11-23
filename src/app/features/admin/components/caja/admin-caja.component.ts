@@ -25,12 +25,21 @@ import { RealtimeService } from '../../../../core/services/realtime.service';
           </div>
         </div>
 
-        <button
-          type="button"
-          (click)="cargarMonitoreo()"
-          class="h-9 px-3 bg-[#222222] hover:bg-zinc-700 text-xs font-semibold rounded-xl border border-zinc-700">
-          🔄 Actualizar
-        </button>
+        <div class="flex items-center gap-2">
+          <!-- SELECTOR DE FECHA -->
+          <input 
+            type="date" 
+            [(ngModel)]="fechaSeleccionada"
+            (ngModelChange)="cargarMonitoreo()"
+            class="h-9 px-2 bg-[#222222] border border-zinc-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-red-500 [color-scheme:dark]" />
+
+          <button
+            type="button"
+            (click)="cargarMonitoreo()"
+            class="h-9 px-3 bg-[#222222] hover:bg-zinc-700 text-xs font-semibold rounded-xl border border-zinc-700">
+            🔄 Actualizar
+          </button>
+        </div>
       </header>
 
       <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
@@ -138,7 +147,6 @@ import { RealtimeService } from '../../../../core/services/realtime.service';
                 @for (t of info.turnosAbiertos; track t.id) {
                   <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-5 space-y-4 relative">
                     
-                    <!-- Botón de Cerrar Turno (Arriba a la derecha) -->
                     <button 
                       (click)="abrirModalCierre(t)"
                       class="absolute top-4 right-4 bg-red-950/60 hover:bg-red-900 text-red-300 border border-red-500/30 px-3 py-1 rounded-lg text-[10px] font-bold transition-all">
@@ -164,7 +172,6 @@ import { RealtimeService } from '../../../../core/services/realtime.service';
                       </div>
                     </div>
 
-                    <!-- Desglose Efectivo vs Tarjeta vs Transferencia -->
                     <div class="grid grid-cols-3 gap-2 text-xs">
                       <div class="bg-[#111111] border border-zinc-800 rounded-xl p-2.5">
                         <div class="text-[10px] text-zinc-400">💵 Efectivo</div>
@@ -188,7 +195,6 @@ import { RealtimeService } from '../../../../core/services/realtime.service';
                       </div>
                     </div>
 
-                    <!-- Balance de Gaveta -->
                     <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3 flex items-center justify-between text-xs">
                       <div class="space-y-0.5">
                         <div class="text-zinc-400">
@@ -213,10 +219,13 @@ import { RealtimeService } from '../../../../core/services/realtime.service';
             }
           </section>
 
-          <!-- ==================== CORTES CERRADOS HOY (HISTORIAL) ==================== -->
+          <!-- ==================== CORTES CERRADOS DEL DÍA ==================== -->
           @if (info.turnosCerradosHoy.length > 0) {
             <section class="bg-[#181818] border border-zinc-800 rounded-2xl p-5 space-y-3">
-              <h2 class="font-bold text-sm text-white">📑 Historial de Cortes (Hoy)</h2>
+              <div class="flex items-center justify-between">
+                <h2 class="font-bold text-sm text-white">📑 Historial de Cortes del Día</h2>
+                <span class="text-[11px] text-zinc-400">{{ fechaSeleccionada | date:'dd/MM/yyyy' }}</span>
+              </div>
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs">
                   <thead class="text-zinc-400 border-b border-zinc-800">
@@ -248,6 +257,10 @@ import { RealtimeService } from '../../../../core/services/realtime.service';
                 </table>
               </div>
             </section>
+          } @else {
+            <div class="bg-[#181818] border border-dashed border-zinc-800 rounded-2xl p-10 text-center text-xs text-zinc-500">
+              No hay cortes cerrados registrados para la fecha seleccionada.
+            </div>
           }
 
         }
@@ -323,6 +336,9 @@ export class AdminCajaComponent implements OnInit, OnDestroy {
   feedback = signal<string | null>(null);
   isAssigning = signal(false);
 
+  // Variable para la fecha seleccionada
+  fechaSeleccionada: string = new Date().toISOString().split('T')[0];
+
   // Estados del Modal de Cierre
   isCierreModalOpen = signal(false);
   turnoACerrar = signal<any | null>(null);
@@ -352,7 +368,9 @@ export class AdminCajaComponent implements OnInit, OnDestroy {
   }
 
   cargarMonitoreo(): void {
-    this.http.get(`${this.apiUrl}/admin/monitoreo`).subscribe({
+    const fechaParam = this.fechaSeleccionada ? `?fecha=${this.fechaSeleccionada}` : '';
+    
+    this.http.get(`${this.apiUrl}/admin/monitoreo${fechaParam}`).subscribe({
       next: (res) => this.data.set(res),
       error: (err) => console.error('Error al cargar monitoreo de cajas:', err),
     });
@@ -382,10 +400,9 @@ export class AdminCajaComponent implements OnInit, OnDestroy {
       });
   }
 
-  // --- Lógica para Cerrar Turno ---
   abrirModalCierre(turno: any): void {
     this.turnoACerrar.set(turno);
-    this.efectivoContado = null; // Resetear el input
+    this.efectivoContado = null;
     this.isCierreModalOpen.set(true);
   }
 
@@ -406,7 +423,6 @@ export class AdminCajaComponent implements OnInit, OnDestroy {
 
     this.isClosingTurno.set(true);
 
-    // 🛠️ CORRECCIÓN: Se usa .post() para coincidir con la ruta del backend
     this.http.post<{ message: string }>(`${this.apiUrl}/${turno.id}/cerrar`, {
       efectivoContado: this.efectivoContado,
       notasCierre: this.calcularDiferencia() !== 0 ? 'Cierre con diferencia' : 'Cuadre perfecto'
@@ -415,7 +431,7 @@ export class AdminCajaComponent implements OnInit, OnDestroy {
         this.isClosingTurno.set(false);
         this.cerrarModalCierre();
         this.feedback.set(res.message);
-        this.cargarMonitoreo(); // Refresca la pantalla
+        this.cargarMonitoreo();
         setTimeout(() => this.feedback.set(null), 4000);
       },
       error: (err) => {
