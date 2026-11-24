@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
 import { RealtimeService } from '../../../../core/services/realtime.service';
 import { PosTurnoModalComponent } from '../turno-modaL/pos-turno-modal.component';
+import { ThemeService } from '../../../../services/theme.service';
 
 export interface PosCategory {
   id: number | string;
@@ -97,6 +98,7 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private router = inject(Router);
   private authService = inject(AuthService);
+  themeService = inject(ThemeService);
   private realtimeService = inject(RealtimeService);
 
   private baseApi = 'http://localhost:3000/api/v1';

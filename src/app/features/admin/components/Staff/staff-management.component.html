@@ -1,257 +1,262 @@
-<div class="p-4 sm:p-6 bg-[#0d0d0d] min-h-screen text-white font-sans select-none">
-  
-  <!-- Botón para volver al dashboard -->
+<div class="p-4 sm:p-6 bg-app min-h-screen text-main font-sans select-none">
+
+  <!-- Navegación Superior -->
   <div class="mb-4">
-    <a 
-      routerLink="/admin" 
-      class="inline-flex items-center gap-2 text-zinc-400 hover:text-white text-xs font-semibold transition-colors bg-[#181818] hover:bg-[#222222] border border-zinc-800 px-3 py-1.5 rounded-lg w-fit">
-      <span>←</span>
-      <span>Volver al Panel Admin</span>
+    <a routerLink="/admin" class="inline-flex items-center gap-1.5 text-xs text-muted hover:text-main transition-colors">
+      ← Volver al Panel Admin
     </a>
   </div>
 
-  <!-- Encabezado del Módulo -->
+  <!-- Encabezado y Acción Principal -->
   <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
     <div>
-      <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Gestión de Personal Operativo</h1>
-      <p class="text-xs sm:text-sm text-zinc-400">Administra los usuarios de Mesero y Cocina para el POS</p>
+      <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Gestión de Personal (Staff)</h1>
+      <p class="text-xs sm:text-sm text-muted">Administra los accesos, roles y códigos PIN de meseros y cocina</p>
     </div>
 
     <button 
       (click)="openCreateModal()"
-      class="bg-[#ab2424] hover:bg-[#961e1e] active:scale-95 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-      </svg>
-      <span>Nuevo Empleado</span>
+      class="bg-brand hover:bg-brand-hover active:scale-95 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2">
+      <span>+ Nuevo Integrante</span>
     </button>
   </div>
 
-  <!-- Alertas de Estado -->
+  <!-- Alertas -->
   @if (successMessage()) {
-    <div class="mb-4 bg-emerald-950/80 border border-emerald-600/50 text-emerald-200 px-4 py-2.5 rounded-xl text-xs sm:text-sm flex justify-between items-center">
+    <div class="mb-4 bg-emerald-500/15 border border-emerald-500/40 text-emerald-500 px-4 py-2.5 rounded-xl text-xs sm:text-sm flex justify-between items-center font-semibold">
       <span>{{ successMessage() }}</span>
-      <button (click)="successMessage.set('')" class="text-emerald-400 font-bold">&times;</button>
+      <button (click)="successMessage.set('')" class="font-bold text-base">&times;</button>
     </div>
   }
 
   @if (errorMessage() && !isModalOpen()) {
-    <div class="mb-4 bg-red-950/80 border border-red-600/50 text-red-200 px-4 py-2.5 rounded-xl text-xs sm:text-sm flex justify-between items-center">
+    <div class="mb-4 bg-brand/15 border border-brand/40 text-brand px-4 py-2.5 rounded-xl text-xs sm:text-sm flex justify-between items-center font-semibold">
       <span>{{ errorMessage() }}</span>
-      <button (click)="errorMessage.set('')" class="text-red-400 font-bold">&times;</button>
+      <button (click)="errorMessage.set('')" class="font-bold text-base">&times;</button>
     </div>
   }
 
-  <!-- Tabla de Usuarios (Touch & Tablet Optimized) -->
-  <div class="bg-[#181818] border border-zinc-800/80 rounded-2xl shadow-xl overflow-hidden">
-    
-    @if (isLoading()) {
-      <div class="p-12 text-center text-zinc-400 text-sm flex flex-col items-center gap-2">
-        <span class="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></span>
-        <span>Cargando lista de personal...</span>
-      </div>
-    } @else if (staffList().length === 0) {
-      <div class="p-12 text-center text-zinc-500 text-sm">
-        No hay miembros de personal registrados aún.
-      </div>
-    } @else {
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse text-xs sm:text-sm">
-          <thead>
-            <tr class="bg-[#111111] border-b border-zinc-800 text-zinc-400 uppercase text-[10px] sm:text-xs tracking-wider">
-              <th class="py-3.5 px-4 font-semibold">Empleado</th>
-              <th class="py-3.5 px-4 font-semibold">Código</th>
-              <th class="py-3.5 px-4 font-semibold">Teléfono</th>
-              <th class="py-3.5 px-4 font-semibold">Rol</th>
-              <th class="py-3.5 px-4 font-semibold">Estado</th>
-              <th class="py-3.5 px-4 font-semibold text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-zinc-800/60">
-            @for (user of staffList(); track user.id) {
-              <tr class="hover:bg-[#1c1c1c]/50 transition-colors">
-                
-                <td class="py-3 px-4">
-                  <div class="font-bold text-white">{{ user.nombre }} {{ user.apellido }}</div>
-                </td>
-
-                <td class="py-3 px-4 font-mono text-zinc-300 font-semibold">
-                  #{{ user.codigoEmpleado }}
-                </td>
-
-                <td class="py-3 px-4 text-zinc-400 font-mono">
-                  {{ user.telefono }}
-                </td>
-
-                <td class="py-3 px-4">
-                  <span 
-                    class="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider"
-                    [ngClass]="user.rol.nombre === 'Cocina' ? 'bg-amber-950/60 border border-amber-500/40 text-amber-300' : 'bg-blue-950/60 border border-blue-500/40 text-blue-300'">
-                    {{ user.rol.nombre }}
-                  </span>
-                </td>
-
-                <td class="py-3 px-4">
-                  <span 
-                    class="px-2 py-0.5 rounded-full text-[10px] font-bold"
-                    [ngClass]="user.estaActivo ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'">
-                    {{ user.estaActivo ? 'Activo' : 'Inactivo' }}
-                  </span>
-                </td>
-
-                <td class="py-3 px-4 text-right">
-                  <div class="flex items-center justify-end gap-2">
-                    <button 
-                      (click)="openEditModal(user)"
-                      class="p-2 bg-[#222222] hover:bg-zinc-700 active:scale-95 text-zinc-300 rounded-lg border border-zinc-700 transition-all">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-
-                    <button 
-                      (click)="deleteStaff(user)"
-                      class="p-2 bg-[#222222] hover:bg-red-950/80 active:scale-95 text-red-400 hover:text-red-200 rounded-lg border border-zinc-700 hover:border-red-800/60 transition-all">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-
+  <!-- Contenido Principal -->
+  @if (isLoading()) {
+    <div class="bg-card border border-line rounded-2xl p-12 text-center text-muted text-sm flex flex-col items-center gap-2">
+      <span class="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin"></span>
+      <span>Cargando lista de personal...</span>
+    </div>
+  } @else {
+    <div class="bg-card border border-line rounded-2xl shadow-sm overflow-hidden">
+      @if (staffList().length === 0) {
+        <div class="p-12 text-center text-muted text-sm">
+          No hay personal registrado aún. Haz clic en "+ Nuevo Integrante" para comenzar.
+        </div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-input border-b border-line text-muted uppercase text-[10px] sm:text-xs tracking-wider">
+                <th class="py-3.5 px-4 font-semibold">Integrante</th>
+                <th class="py-3.5 px-4 font-semibold">Código Empleado</th>
+                <th class="py-3.5 px-4 font-semibold">Rol</th>
+                <th class="py-3.5 px-4 font-semibold">Teléfono</th>
+                <th class="py-3.5 px-4 font-semibold">Estado</th>
+                <th class="py-3.5 px-4 font-semibold text-right">Acciones</th>
               </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-  </div>
+            </thead>
+            <tbody class="divide-y divide-line">
+              @for (user of staffList(); track user.id) {
+                <tr class="hover:bg-hover/50 transition-colors">
+                  
+                  <!-- Nombre y Apellido -->
+                  <td class="py-3 px-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-full bg-hover border border-line flex items-center justify-center font-bold text-xs text-main shrink-0">
+                        {{ user.nombre.charAt(0) }}{{ user.apellido.charAt(0) }}
+                      </div>
+                      <div class="font-bold text-main">
+                        {{ user.nombre }} {{ user.apellido }}
+                      </div>
+                    </div>
+                  </td>
 
-  <!-- MODAL DE CREACIÓN / EDICIÓN -->
+                  <!-- Código Empleado -->
+                  <td class="py-3 px-4 font-mono font-bold text-main">
+                    {{ user.codigoEmpleado }}
+                  </td>
+
+                  <!-- Rol -->
+                  <td class="py-3 px-4">
+                    <span 
+                      class="px-2.5 py-1 rounded-full text-[10px] font-bold border"
+                      [ngClass]="user.rol.nombre === 'Cocina' 
+                        ? 'bg-amber-500/15 text-amber-500 border-amber-500/40' 
+                        : 'bg-sky-500/15 text-sky-500 border-sky-500/30'">
+                      {{ user.rol.nombre === 'Cocina' ? '👨‍🍳 Cocina' : '🍽️ Mesero' }}
+                    </span>
+                  </td>
+
+                  <!-- Teléfono -->
+                  <td class="py-3 px-4 font-mono text-muted">
+                    {{ user.telefono }}
+                  </td>
+
+                  <!-- Estado -->
+                  <td class="py-3 px-4">
+                    <span 
+                      class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
+                      [ngClass]="user.estaActivo 
+                        ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' 
+                        : 'bg-hover text-muted border border-line'">
+                      {{ user.estaActivo ? 'Activo' : 'Inactivo' }}
+                    </span>
+                  </td>
+
+                  <!-- Acciones -->
+                  <td class="py-3 px-4 text-right">
+                    <div class="flex items-center justify-end gap-2">
+                      <button 
+                        (click)="openEditModal(user)"
+                        title="Editar Integrante"
+                        class="p-2 bg-hover hover:opacity-80 active:scale-95 text-main rounded-lg border border-line transition-all">
+                        ✏️
+                      </button>
+                      <button 
+                        (click)="deleteStaff(user)"
+                        title="Eliminar Integrante"
+                        class="p-2 bg-hover hover:bg-brand/15 active:scale-95 text-brand rounded-lg border border-line hover:border-brand/40 transition-all">
+                        🗑️
+                      </button>
+                    </div>
+                  </td>
+
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ==================== MODAL CREAR / EDITAR PERSONAL ==================== -->
   @if (isModalOpen()) {
-    <div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div class="bg-[#181818] border border-zinc-800 rounded-2xl md:rounded-3xl max-w-lg w-full p-6 shadow-2xl relative my-auto">
+    <div class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+      <div class="bg-card border border-line rounded-2xl max-w-lg w-full p-6 shadow-2xl my-auto">
         
-        <!-- Header Modal -->
-        <div class="flex items-center justify-between border-b border-zinc-800 pb-4 mb-4">
-          <h2 class="text-base sm:text-lg font-bold">
-            {{ selectedUser() ? 'Editar Personal' : 'Nuevo Empleado Operativo' }}
+        <div class="flex items-center justify-between border-b border-line pb-3 mb-4">
+          <h2 class="text-base font-bold text-main">
+            {{ selectedUser() ? 'Editar Integrante' : 'Registrar Nuevo Integrante' }}
           </h2>
-          <button (click)="closeModal()" class="text-zinc-400 hover:text-white text-xl font-bold p-1">&times;</button>
+          <button (click)="closeModal()" class="text-muted hover:text-main text-xl font-bold">&times;</button>
         </div>
 
-        <!-- Mensaje Error Modal -->
         @if (errorMessage()) {
-          <div class="mb-4 bg-red-950/80 border border-red-600/50 text-red-200 px-3 py-2 rounded-xl text-xs">
+          <div class="mb-3 bg-brand/15 border border-brand/40 text-brand px-3 py-2 rounded-xl text-xs font-semibold">
             {{ errorMessage() }}
           </div>
         }
 
-        <!-- Formulario -->
-        <form (submit)="$event.preventDefault(); saveStaff()" class="space-y-3 sm:space-y-4">
+        <form (submit)="$event.preventDefault(); saveStaff()" class="space-y-3">
           
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Nombre</label>
+              <label class="block text-[11px] font-semibold text-muted uppercase mb-1">Nombre</label>
               <input 
                 type="text" 
+                maxlength="50"
                 [(ngModel)]="formData.nombre" 
-                name="nombre" 
-                placeholder="Carlos"
-                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white text-xs sm:text-sm focus:outline-none focus:border-red-500" />
+                name="nombre"
+                placeholder="Ej. Carlos"
+                class="w-full h-10 bg-input border border-line rounded-xl px-3 text-main text-xs sm:text-sm focus:outline-none focus:border-brand" />
             </div>
 
             <div>
-              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Apellido</label>
+              <label class="block text-[11px] font-semibold text-muted uppercase mb-1">Apellido</label>
               <input 
                 type="text" 
+                maxlength="50"
                 [(ngModel)]="formData.apellido" 
-                name="apellido" 
-                placeholder="Mendoza"
-                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white text-xs sm:text-sm focus:outline-none focus:border-red-500" />
+                name="apellido"
+                placeholder="Ej. Mendoza"
+                class="w-full h-10 bg-input border border-line rounded-xl px-3 text-main text-xs sm:text-sm focus:outline-none focus:border-brand" />
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Código Empleado</label>
+              <label class="block text-[11px] font-semibold text-muted uppercase mb-1">Teléfono</label>
               <input 
-                type="text" 
-                [(ngModel)]="formData.codigoEmpleado" 
-                name="codigoEmpleado" 
-                placeholder="101"
-                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-red-500" />
-            </div>
-
-            <div>
-              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Teléfono</label>
-              <input 
-                type="text" 
+                type="tel" 
+                maxlength="15"
                 [(ngModel)]="formData.telefono" 
-                name="telefono" 
-                placeholder="3312345678"
-                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-red-500" />
+                name="telefono"
+                placeholder="Ej. 3312345678"
+                class="w-full h-10 bg-input border border-line rounded-xl px-3 text-main font-mono text-xs sm:text-sm focus:outline-none focus:border-brand" />
             </div>
-          </div>
 
-          <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Rol Operativo</label>
+              <label class="block text-[11px] font-semibold text-muted uppercase mb-1">Rol en el Sistema</label>
               <select 
                 [(ngModel)]="formData.rolNombre" 
                 name="rolNombre"
-                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white text-xs sm:text-sm focus:outline-none focus:border-red-500">
+                class="w-full h-10 bg-input border border-line rounded-xl px-3 text-main text-xs sm:text-sm focus:outline-none focus:border-brand">
                 <option value="Mesero">Mesero</option>
                 <option value="Cocina">Cocina</option>
               </select>
             </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-muted uppercase mb-1">Código de Empleado</label>
+              <input 
+                type="text" 
+                maxlength="20"
+                [(ngModel)]="formData.codigoEmpleado" 
+                name="codigoEmpleado"
+                placeholder="Ej. EMP-01"
+                class="w-full h-10 bg-input border border-line rounded-xl px-3 text-main font-mono text-xs sm:text-sm focus:outline-none focus:border-brand" />
+            </div>
 
             <div>
-              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">
-                PIN de 4 Dígitos {{ selectedUser() ? '(Opcional)' : '' }}
+              <label class="block text-[11px] font-semibold text-muted uppercase mb-1">
+                {{ selectedUser() ? 'Nuevo PIN (Opcional)' : 'PIN de Acceso (4 dígitos)' }}
               </label>
               <input 
                 type="password" 
-                maxLength="4" 
+                inputmode="numeric"
+                maxlength="4"
                 [(ngModel)]="formData.pin" 
-                name="pin" 
-                placeholder="1234"
-                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-red-500" />
+                name="pin"
+                placeholder="••••"
+                class="w-full h-10 bg-input border border-line rounded-xl px-3 text-main font-mono tracking-widest text-xs sm:text-sm focus:outline-none focus:border-brand" />
             </div>
           </div>
 
           @if (selectedUser()) {
-            <div class="flex items-center gap-2 pt-1">
+            <div class="flex items-center gap-2 pt-2">
               <input 
                 type="checkbox" 
                 id="estaActivo" 
                 [(ngModel)]="formData.estaActivo" 
                 name="estaActivo"
-                class="w-4 h-4 accent-red-600 rounded bg-[#111111] border-zinc-800" />
-              <label for="estaActivo" class="text-xs text-zinc-300">Usuario activo para acceder al POS</label>
+                class="w-4 h-4 accent-brand rounded bg-input border-line" />
+              <label for="estaActivo" class="text-xs text-main">Usuario activo (puede iniciar sesión con su PIN)</label>
             </div>
           }
 
-          <!-- Botones de Acción Modal -->
-          <div class="flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+          <div class="flex justify-end gap-2 pt-4 border-t border-line">
             <button 
               type="button" 
-              (click)="closeModal()"
-              class="px-4 py-2 bg-[#222222] hover:bg-zinc-800 text-zinc-300 font-semibold text-xs rounded-xl transition-all">
+              (click)="closeModal()" 
+              class="px-4 py-2 bg-hover text-main border border-line text-xs font-semibold rounded-xl">
               Cancelar
             </button>
-
             <button 
               type="submit" 
-              [disabled]="isSaving()"
-              class="px-5 py-2 bg-[#ab2424] hover:bg-[#961e1e] text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center gap-2">
-              @if (isSaving()) {
-                <span class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              }
-              <span>{{ selectedUser() ? 'Actualizar' : 'Guardar Empleado' }}</span>
+              [disabled]="isSaving()" 
+              class="px-5 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-xl">
+              {{ isSaving() ? 'Guardando...' : 'Guardar Cambios' }}
             </button>
           </div>
-
         </form>
 
       </div>

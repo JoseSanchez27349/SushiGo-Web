@@ -1,34 +1,28 @@
 @if (isPublicView) {
   <!-- Barra de Navegación -->
-  <nav class="bg-gray-900 text-white shadow-lg">
+  <nav class="bg-card text-main border-b border-line shadow-sm">
     <div class="container mx-auto px-6 py-4 flex justify-between items-center">
       <a routerLink="/" class="text-3xl font-bold tracking-wider">
-        Sushi<span class="text-red-500">Go</span>
+        Sushi<span class="text-brand">Go</span>
       </a>
       
       <div class="space-x-6 text-lg">
-        <a routerLink="/" routerLinkActive="text-red-400 font-semibold" [routerLinkActiveOptions]="{exact: true}" class="hover:text-red-400 transition">Inicio</a>
-        <a routerLink="/menu" routerLinkActive="text-red-400 font-semibold" class="hover:text-red-400 transition">Menú</a>
-        <a routerLink="/contacto" routerLinkActive="text-red-400 font-semibold" class="hover:text-red-400 transition">Contacto</a>
+        <a routerLink="/" routerLinkActive="text-brand font-semibold" [routerLinkActiveOptions]="{exact: true}" class="hover:text-brand transition">Inicio</a>
+        <a routerLink="/menu" routerLinkActive="text-brand font-semibold" class="hover:text-brand transition">Menú</a>
+        <a routerLink="/contacto" routerLinkActive="text-brand font-semibold" class="hover:text-brand transition">Contacto</a>
       </div>
     </div>
   </nav>
 }
 
-<!-- 
-  El main cambia según la ruta:
-  - Login: pantalla completa sin scroll.
-  - Paneles privados (POS, Cocina, Admin): fondo oscuro y scroll vertical activado.
-  - Público: fondo claro y altura automática.
--->
 <main [class]="router.url.includes('/login') 
-  ? 'fixed inset-0 h-dvh w-full overflow-hidden bg-[#0d0d0d]' 
-  : (!isPublicView ? 'min-h-screen h-full bg-[#0d0d0d] overflow-y-auto' : 'min-h-screen bg-gray-50')">
+  ? 'fixed inset-0 h-dvh w-full overflow-hidden bg-app text-main' 
+  : (!isPublicView ? 'min-h-screen h-full bg-app text-main overflow-y-auto' : 'min-h-screen bg-app text-main')">
   <router-outlet></router-outlet>
 </main>
 
 @if (isPublicView) {
-  <footer class="bg-gray-900 text-gray-400 py-6 text-center">
+  <footer class="bg-card text-muted border-t border-line py-6 text-center">
     <p>&copy; 2026 SushiGo - Fusión México-Japón. Todos los derechos reservados.</p>
   </footer>
 }

@@ -1,1 +1,43 @@
 @import "tailwindcss";
+
+/* 1. TEMA OSCURO (Por defecto) */
+:root {
+  --bg-app: #0d0d0d;
+  --bg-card: #181818;
+  --bg-panel: #141414;
+  --bg-input: #111111;
+  --bg-hover: #222222;
+  --border-subtle: #27272a;
+  --text-main: #ffffff;
+  --text-muted: #a1a1aa;
+  --accent: #ab2424;
+  --accent-hover: #961e1e;
+}
+
+/* 2. TEMA CLARO (Paleta Crema + Carmesí) */
+html.light {
+  --bg-app: #F7F3EE;
+  --bg-card: #FFFFFF;
+  --bg-panel: #FFFFFF;
+  --bg-input: #F7F3EE;
+  --bg-hover: #EFE8E0;
+  --border-subtle: #E6DFD7;
+  --text-main: #2B211E;
+  --text-muted: #7A706C;
+  --accent: #9E2A2B;
+  --accent-hover: #822223;
+}
+
+/* 3. Clases dinámicas para Tailwind v4 */
+@theme {
+  --color-app: var(--bg-app);
+  --color-card: var(--bg-card);
+  --color-panel: var(--bg-panel);
+  --color-input: var(--bg-input);
+  --color-hover: var(--bg-hover);
+  --color-line: var(--border-subtle);
+  --color-main: var(--text-main);
+  --color-muted: var(--text-muted);
+  --color-brand: var(--accent);
+  --color-brand-hover: var(--accent-hover);
+}
