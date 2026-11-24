@@ -1,47 +1,47 @@
-<div class="min-h-screen bg-[#0d0d0d] text-white font-sans flex flex-col">
+<div class="min-h-screen bg-app text-main font-sans flex flex-col">
 
   <!-- Navbar Superior Admin -->
-  <header class="bg-[#181818] border-b border-zinc-800 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30">
+  <header class="bg-card border-b border-line px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30 shadow-xs">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 bg-[#ab2424] text-white rounded-xl flex items-center justify-center font-black text-xl shadow">
-        📊
-      </div>
+      <div class="w-10 h-10 bg-white border border-line rounded-xl p-1 flex items-center justify-center overflow-hidden shadow-2xs shrink-0">
+  <img src="logo-sushigo.jpeg" alt="Logo SushiGo" class="w-full h-full object-contain" />
+</div>
       <div>
         <div class="flex items-center gap-2">
           <h1 class="font-bold text-sm sm:text-base tracking-wide leading-tight">SushiGo · Panel Ejecutivo</h1>
           <span 
             [title]="socketConnected() ? 'Métricas sincronizadas en vivo' : 'Reconectando...'"
             class="w-2 h-2 rounded-full"
-            [ngClass]="socketConnected() ? 'bg-emerald-400' : 'bg-red-500 animate-ping'">
+            [ngClass]="socketConnected() ? 'bg-emerald-500' : 'bg-red-500 animate-ping'">
           </span>
         </div>
-        <p class="text-[11px] text-zinc-400">
+        <p class="text-[11px] text-muted">
           {{ user()?.nombre }} · Actualizado {{ lastUpdated() | date:'HH:mm:ss' }}
         </p>
       </div>
     </div>
 
     <!-- Selector de Periodo -->
-    <div class="flex items-center bg-[#111111] border border-zinc-800 rounded-xl p-1 text-xs font-bold">
+    <div class="flex items-center bg-input border border-line rounded-xl p-1 text-xs font-bold">
       <button 
         type="button"
         (click)="setPeriodo('hoy')"
         class="px-3 py-1.5 rounded-lg transition-all"
-        [ngClass]="periodo() === 'hoy' ? 'bg-white text-black shadow' : 'text-zinc-400 hover:text-white'">
+        [ngClass]="periodo() === 'hoy' ? 'bg-brand text-white shadow' : 'text-muted hover:text-main'">
         Hoy
       </button>
       <button 
         type="button"
         (click)="setPeriodo('semana')"
         class="px-3 py-1.5 rounded-lg transition-all"
-        [ngClass]="periodo() === 'semana' ? 'bg-white text-black shadow' : 'text-zinc-400 hover:text-white'">
+        [ngClass]="periodo() === 'semana' ? 'bg-brand text-white shadow' : 'text-muted hover:text-main'">
         7 Días
       </button>
       <button 
         type="button"
         (click)="setPeriodo('mes')"
         class="px-3 py-1.5 rounded-lg transition-all"
-        [ngClass]="periodo() === 'mes' ? 'bg-white text-black shadow' : 'text-zinc-400 hover:text-white'">
+        [ngClass]="periodo() === 'mes' ? 'bg-brand text-white shadow' : 'text-muted hover:text-main'">
         30 Días
       </button>
     </div>
@@ -55,23 +55,32 @@
         (click)="descargarReportePDF()"
         [disabled]="!metrics()"
         title="Descargar Reporte en PDF"
-        class="h-9 px-3 bg-red-950/40 hover:bg-red-900/60 disabled:opacity-50 text-red-300 text-xs font-bold rounded-xl border border-red-800/50 transition-all flex items-center gap-1.5 active:scale-95">
+        class="h-9 px-3 bg-brand/15 hover:bg-brand/25 disabled:opacity-50 text-brand text-xs font-bold rounded-xl border border-brand/30 transition-all flex items-center gap-1.5 active:scale-95">
         <span>📄</span>
         <span class="hidden sm:inline">Exportar PDF</span>
+      </button>
+
+      <!-- ☀️/🌙 Botón Modo Claro / Oscuro -->
+      <button 
+        type="button"
+        (click)="themeService.toggleTheme()"
+        [title]="themeService.isLight() ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'"
+        class="h-9 px-3 bg-hover hover:opacity-80 active:scale-95 text-main text-xs font-semibold rounded-xl border border-line transition-all">
+        {{ themeService.isLight() ? '🌙' : '☀️' }}
       </button>
 
       <button 
         type="button"
         (click)="loadMetrics(true)"
         title="Recargar métricas"
-        class="h-9 px-3 bg-[#222222] hover:bg-zinc-700 active:scale-95 text-zinc-200 text-xs font-semibold rounded-xl border border-zinc-700 transition-all">
+        class="h-9 px-3 bg-hover hover:opacity-80 active:scale-95 text-main text-xs font-semibold rounded-xl border border-line transition-all">
         🔄
       </button>
 
       <button 
         type="button"
         (click)="onLogout()"
-        class="h-9 px-3 bg-[#222222] hover:bg-red-950/50 text-zinc-300 hover:text-red-400 border border-zinc-800 hover:border-red-800/50 text-xs font-semibold rounded-xl transition-all active:scale-95">
+        class="h-9 px-3 bg-hover hover:bg-red-500/15 text-main hover:text-brand border border-line hover:border-brand/40 text-xs font-semibold rounded-xl transition-all active:scale-95">
         Salir
       </button>
     </div>
@@ -83,58 +92,58 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       <a 
         routerLink="/admin/caja"
-        class="bg-[#181818] hover:bg-[#1f1f1f] border border-zinc-800 hover:border-emerald-500/50 rounded-2xl p-3.5 flex items-center gap-3 transition-all">
-        <span class="w-10 h-10 rounded-xl bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center text-lg">💵</span>
+        class="bg-card hover:bg-hover/60 border border-line hover:border-emerald-500/50 rounded-2xl p-3.5 flex items-center gap-3 transition-all shadow-2xs">
+        <span class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-lg">💵</span>
         <div>
-          <div class="font-bold text-xs sm:text-sm text-white">Cajas y Turnos</div>
-          <div class="text-[11px] text-zinc-400">Fondos y cortes en vivo</div>
+          <div class="font-bold text-xs sm:text-sm text-main">Cajas y Turnos</div>
+          <div class="text-[11px] text-muted">Fondos y cortes en vivo</div>
         </div>
       </a>
 
       <a 
         routerLink="/admin/menu"
-        class="bg-[#181818] hover:bg-[#1f1f1f] border border-zinc-800 hover:border-red-500/50 rounded-2xl p-3.5 flex items-center gap-3 transition-all">
-        <span class="w-10 h-10 rounded-xl bg-red-950/60 border border-red-500/30 flex items-center justify-center text-lg">🍣</span>
+        class="bg-card hover:bg-hover/60 border border-line hover:border-brand/50 rounded-2xl p-3.5 flex items-center gap-3 transition-all shadow-2xs">
+        <span class="w-10 h-10 rounded-xl bg-brand/15 border border-brand/30 flex items-center justify-center text-lg">🍣</span>
         <div>
-          <div class="font-bold text-xs sm:text-sm text-white">Menú y Recetas</div>
-          <div class="text-[11px] text-zinc-400">Platillos y precios</div>
+          <div class="font-bold text-xs sm:text-sm text-main">Menú y Recetas</div>
+          <div class="text-[11px] text-muted">Platillos y precios</div>
         </div>
       </a>
 
       <a 
         routerLink="/admin/inventory"
-        class="bg-[#181818] hover:bg-[#1f1f1f] border border-zinc-800 hover:border-amber-500/50 rounded-2xl p-3.5 flex items-center gap-3 transition-all">
-        <span class="w-10 h-10 rounded-xl bg-amber-950/60 border border-amber-500/30 flex items-center justify-center text-lg">📦</span>
+        class="bg-card hover:bg-hover/60 border border-line hover:border-amber-500/50 rounded-2xl p-3.5 flex items-center gap-3 transition-all shadow-2xs">
+        <span class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-lg">📦</span>
         <div>
-          <div class="font-bold text-xs sm:text-sm text-white">Inventario</div>
-          <div class="text-[11px] text-zinc-400">Insumos y entradas</div>
+          <div class="font-bold text-xs sm:text-sm text-main">Inventario</div>
+          <div class="text-[11px] text-muted">Insumos y entradas</div>
         </div>
       </a>
 
       <a 
         routerLink="/admin/tables"
-        class="bg-[#181818] hover:bg-[#1f1f1f] border border-zinc-800 hover:border-sky-500/50 rounded-2xl p-3.5 flex items-center gap-3 transition-all">
-        <span class="w-10 h-10 rounded-xl bg-sky-950/60 border border-sky-500/30 flex items-center justify-center text-lg">🪑</span>
+        class="bg-card hover:bg-hover/60 border border-line hover:border-sky-500/50 rounded-2xl p-3.5 flex items-center gap-3 transition-all shadow-2xs">
+        <span class="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-lg">🪑</span>
         <div>
-          <div class="font-bold text-xs sm:text-sm text-white">Mesas</div>
-          <div class="text-[11px] text-zinc-400">Distribución y estado</div>
+          <div class="font-bold text-xs sm:text-sm text-main">Mesas</div>
+          <div class="text-[11px] text-muted">Distribución y estado</div>
         </div>
       </a>
 
       <a 
         routerLink="/admin/staff"
-        class="bg-[#181818] hover:bg-[#1f1f1f] border border-zinc-800 hover:border-indigo-500/50 rounded-2xl p-3.5 flex items-center gap-3 transition-all col-span-2 sm:col-span-1">
-        <span class="w-10 h-10 rounded-xl bg-indigo-950/60 border border-indigo-500/30 flex items-center justify-center text-lg">👥</span>
+        class="bg-card hover:bg-hover/60 border border-line hover:border-indigo-500/50 rounded-2xl p-3.5 flex items-center gap-3 transition-all col-span-2 sm:col-span-1 shadow-2xs">
+        <span class="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-lg">👥</span>
         <div>
-          <div class="font-bold text-xs sm:text-sm text-white">Personal</div>
-          <div class="text-[11px] text-zinc-400">Meseros y cocina</div>
+          <div class="font-bold text-xs sm:text-sm text-main">Personal</div>
+          <div class="text-[11px] text-muted">Meseros y cocina</div>
         </div>
       </a>
     </div>
 
     @if (isLoading() && !metrics()) {
-      <div class="py-24 flex flex-col items-center justify-center text-zinc-400 text-sm gap-2">
-        <span class="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></span>
+      <div class="py-24 flex flex-col items-center justify-center text-muted text-sm gap-2">
+        <span class="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin"></span>
         <span>Calculando métricas operativas y financieras...</span>
       </div>
     } @else if (metrics()) {
@@ -143,76 +152,76 @@
       <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         <!-- KPI 1: Ventas Cobradas -->
-        <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-4 space-y-2">
-          <div class="flex items-center justify-between text-xs text-zinc-400">
+        <div class="bg-card border border-line rounded-2xl p-4 space-y-2 shadow-2xs">
+          <div class="flex items-center justify-between text-xs text-muted">
             <span class="font-semibold uppercase tracking-wider">Ventas Cobradas</span>
             <span class="text-base">💰</span>
           </div>
-          <div class="font-mono font-black text-2xl sm:text-3xl text-emerald-400">
+          <div class="font-mono font-black text-2xl sm:text-3xl text-emerald-500">
             {{ metrics()!.kpis.ventasTotales | currency:'MXN':'symbol-narrow':'1.2-2' }}
           </div>
-          <div class="flex items-center justify-between text-[11px] text-zinc-400 pt-1 border-t border-zinc-800/80">
+          <div class="flex items-center justify-between text-[11px] text-muted pt-1 border-t border-line">
             <span>{{ metrics()!.kpis.ordenesPagadas }} órdenes pagadas</span>
-            <span class="font-mono text-zinc-200">
+            <span class="font-mono text-main font-semibold">
               Ticket: {{ metrics()!.kpis.ticketPromedio | currency:'MXN':'symbol-narrow':'1.0-0' }}
             </span>
           </div>
         </div>
 
         <!-- KPI 2: Margen Bruto Estimado -->
-        <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-4 space-y-2">
-          <div class="flex items-center justify-between text-xs text-zinc-400">
+        <div class="bg-card border border-line rounded-2xl p-4 space-y-2 shadow-2xs">
+          <div class="flex items-center justify-between text-xs text-muted">
             <span class="font-semibold uppercase tracking-wider">Margen Bruto Est.</span>
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/30">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
               {{ metrics()!.kpis.margenPorcentaje }}%
             </span>
           </div>
-          <div class="font-mono font-black text-2xl sm:text-3xl text-white">
+          <div class="font-mono font-black text-2xl sm:text-3xl text-main">
             {{ metrics()!.kpis.margenBruto | currency:'MXN':'symbol-narrow':'1.2-2' }}
           </div>
-          <div class="flex items-center justify-between text-[11px] text-zinc-400 pt-1 border-t border-zinc-800/80">
+          <div class="flex items-center justify-between text-[11px] text-muted pt-1 border-t border-line">
             <span>Costo insumos:</span>
-            <span class="font-mono text-amber-400">
+            <span class="font-mono text-amber-500 font-semibold">
               -{{ metrics()!.kpis.costoInsumos | currency:'MXN':'symbol-narrow':'1.2-2' }}
             </span>
           </div>
         </div>
 
         <!-- KPI 3: Velocidad de Cocina (SLA) -->
-        <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-4 space-y-2">
-          <div class="flex items-center justify-between text-xs text-zinc-400">
+        <div class="bg-card border border-line rounded-2xl p-4 space-y-2 shadow-2xs">
+          <div class="flex items-center justify-between text-xs text-muted">
             <span class="font-semibold uppercase tracking-wider">Tiempo Cocina</span>
             <span 
               class="px-2 py-0.5 rounded-md text-[10px] font-bold border"
               [ngClass]="metrics()!.kpis.porcentajeATiempo >= 80 
-                ? 'bg-emerald-950 text-emerald-300 border-emerald-500/30' 
-                : 'bg-amber-950 text-amber-300 border-amber-500/30'">
+                ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30' 
+                : 'bg-amber-500/15 text-amber-500 border-amber-500/30'">
               {{ metrics()!.kpis.porcentajeATiempo }}% a tiempo
             </span>
           </div>
-          <div class="font-mono font-black text-2xl sm:text-3xl text-amber-400">
-            {{ metrics()!.kpis.tiempoPromedioOrdenMin }} <span class="text-sm font-bold text-zinc-400">min</span>
+          <div class="font-mono font-black text-2xl sm:text-3xl text-amber-500">
+            {{ metrics()!.kpis.tiempoPromedioOrdenMin }} <span class="text-sm font-bold text-muted">min</span>
           </div>
-          <div class="flex items-center justify-between text-[11px] text-zinc-400 pt-1 border-t border-zinc-800/80">
+          <div class="flex items-center justify-between text-[11px] text-muted pt-1 border-t border-line">
             <span>En fuego promedio:</span>
-            <span class="font-mono text-zinc-200">{{ metrics()!.kpis.tiempoPromedioFuegoMin }} min</span>
+            <span class="font-mono text-main font-semibold">{{ metrics()!.kpis.tiempoPromedioFuegoMin }} min</span>
           </div>
         </div>
 
         <!-- KPI 4: Operación en Vivo -->
-        <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-4 space-y-2">
-          <div class="flex items-center justify-between text-xs text-zinc-400">
+        <div class="bg-card border border-line rounded-2xl p-4 space-y-2 shadow-2xs">
+          <div class="flex items-center justify-between text-xs text-muted">
             <span class="font-semibold uppercase tracking-wider">Cuentas Abiertas</span>
-            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-950 text-sky-300 border border-sky-500/30">
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-500/15 text-sky-500 border border-sky-500/30">
               Mesas {{ metrics()!.kpis.mesasOcupadas }}/{{ metrics()!.kpis.mesasTotal }}
             </span>
           </div>
-          <div class="font-mono font-black text-2xl sm:text-3xl text-sky-400">
+          <div class="font-mono font-black text-2xl sm:text-3xl text-sky-500">
             {{ metrics()!.kpis.ventasPorCobrar | currency:'MXN':'symbol-narrow':'1.2-2' }}
           </div>
-          <div class="flex items-center justify-between text-[11px] text-zinc-400 pt-1 border-t border-zinc-800/80">
+          <div class="flex items-center justify-between text-[11px] text-muted pt-1 border-t border-line">
             <span>{{ metrics()!.kpis.ordenesActivasCount }} órdenes activas</span>
-            <span class="text-red-400">{{ metrics()!.kpis.ordenesCanceladas }} canceladas</span>
+            <span class="text-brand font-semibold">{{ metrics()!.kpis.ordenesCanceladas }} canceladas</span>
           </div>
         </div>
 
@@ -222,33 +231,33 @@
       <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         
         <!-- Ventas por Franja Horaria -->
-        <div class="lg:col-span-2 bg-[#181818] border border-zinc-800 rounded-2xl p-5 flex flex-col justify-between">
+        <div class="lg:col-span-2 bg-card border border-line rounded-2xl p-5 flex flex-col justify-between shadow-2xs">
           <div class="flex items-center justify-between mb-4">
             <div>
-              <h2 class="font-bold text-sm text-white">Flujo de Ventas por Hora</h2>
-              <p class="text-[11px] text-zinc-400">Identifica tus horas pico de facturación</p>
+              <h2 class="font-bold text-sm text-main">Flujo de Ventas por Hora</h2>
+              <p class="text-[11px] text-muted">Identifica tus horas pico de facturación</p>
             </div>
-            <span class="text-xs font-mono text-zinc-400">11:00 — 23:00</span>
+            <span class="text-xs font-mono text-muted">11:00 — 23:00</span>
           </div>
 
-          <div class="h-44 flex items-end gap-1.5 sm:gap-2 pt-6 border-b border-zinc-800 pb-2">
+          <div class="h-44 flex items-end gap-1.5 sm:gap-2 pt-6 border-b border-line pb-2">
             @for (slot of metrics()!.ventasPorHora; track slot.hora) {
               <div class="flex-1 flex flex-col items-center justify-end h-full group relative">
                 <!-- Tooltip hover -->
-                <div class="opacity-0 group-hover:opacity-100 pointer-events-none absolute -top-9 bg-zinc-900 border border-zinc-700 px-2 py-1 rounded-lg text-[10px] font-mono whitespace-nowrap z-10 shadow-xl transition-opacity">
+                <div class="opacity-0 group-hover:opacity-100 pointer-events-none absolute -top-9 bg-card border border-line text-main px-2 py-1 rounded-lg text-[10px] font-mono whitespace-nowrap z-10 shadow-xl transition-opacity">
                   {{ slot.total | currency:'MXN':'symbol-narrow':'1.0-0' }} ({{ slot.ordenes }})
                 </div>
 
                 <div 
                   class="w-full rounded-t-md transition-all duration-300"
                   [style.height.%]="getBarHeightPercent(slot.total)"
-                  [ngClass]="slot.total > 0 ? 'bg-gradient-to-t from-[#ab2424] to-red-500 group-hover:brightness-110' : 'bg-zinc-800/60'">
+                  [ngClass]="slot.total > 0 ? 'bg-gradient-to-t from-brand to-red-500 group-hover:brightness-110' : 'bg-hover'">
                 </div>
               </div>
             }
           </div>
 
-          <div class="flex items-center justify-between gap-1 pt-2 text-[10px] font-mono text-zinc-500">
+          <div class="flex items-center justify-between gap-1 pt-2 text-[10px] font-mono text-muted">
             @for (slot of metrics()!.ventasPorHora; track slot.hora) {
               <span class="flex-1 text-center truncate">{{ slot.hora.slice(0, 2) }}h</span>
             }
@@ -256,70 +265,70 @@
         </div>
 
         <!-- Desglose Comedor vs Para Llevar vs Móvil + Stock Bajo -->
-        <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-5 flex flex-col justify-between space-y-5">
+        <div class="bg-card border border-line rounded-2xl p-5 flex flex-col justify-between space-y-5 shadow-2xs">
           <div class="space-y-3">
             <div>
-              <h2 class="font-bold text-sm text-white">Distribución por Canal</h2>
-              <p class="text-[11px] text-zinc-400">Comedor, Para Llevar y Móvil</p>
+              <h2 class="font-bold text-sm text-main">Distribución por Canal</h2>
+              <p class="text-[11px] text-muted">Comedor, Para Llevar y Móvil</p>
             </div>
 
             <!-- Barra proporcional ajustada para 3 canales -->
-            <div class="w-full h-3 rounded-full bg-zinc-800 overflow-hidden flex">
-              <div class="bg-[#ab2424] h-full transition-all" [style.width.%]="porcentajeComedor()"></div>
+            <div class="w-full h-3 rounded-full bg-hover overflow-hidden flex">
+              <div class="bg-brand h-full transition-all" [style.width.%]="porcentajeComedor()"></div>
               <div class="bg-sky-500 h-full transition-all" [style.width.%]="porcentajeLlevar()"></div>
               <div class="bg-purple-500 h-full transition-all" [style.width.%]="porcentajeMovil()"></div>
             </div>
 
             <div class="grid grid-cols-3 gap-2 pt-1">
-              <div class="bg-[#111111] border border-zinc-800 rounded-xl p-2.5">
-                <div class="text-[10px] text-zinc-400 flex items-center gap-1">
-                  <span class="w-1.5 h-1.5 rounded-full bg-[#ab2424]"></span> Comedor
+              <div class="bg-input border border-line rounded-xl p-2.5">
+                <div class="text-[10px] text-muted flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-brand"></span> Comedor
                 </div>
-                <div class="font-mono font-bold text-xs text-white mt-1 truncate">
+                <div class="font-mono font-bold text-xs text-main mt-1 truncate">
                   {{ metrics()!.porCanal.comedor.total | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 </div>
-                <div class="text-[9px] text-zinc-500">{{ metrics()!.porCanal.comedor.ordenes }} ord.</div>
+                <div class="text-[9px] text-muted">{{ metrics()!.porCanal.comedor.ordenes }} ord.</div>
               </div>
 
-              <div class="bg-[#111111] border border-zinc-800 rounded-xl p-2.5">
-                <div class="text-[10px] text-zinc-400 flex items-center gap-1">
+              <div class="bg-input border border-line rounded-xl p-2.5">
+                <div class="text-[10px] text-muted flex items-center gap-1">
                   <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span> Llevar
                 </div>
-                <div class="font-mono font-bold text-xs text-white mt-1 truncate">
+                <div class="font-mono font-bold text-xs text-main mt-1 truncate">
                   {{ metrics()!.porCanal.llevar.total | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 </div>
-                <div class="text-[9px] text-zinc-500">{{ metrics()!.porCanal.llevar.ordenes }} ord.</div>
+                <div class="text-[9px] text-muted">{{ metrics()!.porCanal.llevar.ordenes }} ord.</div>
               </div>
 
-              <div class="bg-[#111111] border border-zinc-800 rounded-xl p-2.5">
-                <div class="text-[10px] text-zinc-400 flex items-center gap-1">
+              <div class="bg-input border border-line rounded-xl p-2.5">
+                <div class="text-[10px] text-muted flex items-center gap-1">
                   <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span> Móvil
                 </div>
-                <div class="font-mono font-bold text-xs text-white mt-1 truncate">
+                <div class="font-mono font-bold text-xs text-main mt-1 truncate">
                   {{ metrics()!.porCanal.movil.total | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 </div>
-                <div class="text-[9px] text-zinc-500">{{ metrics()!.porCanal.movil.ordenes }} ord.</div>
+                <div class="text-[9px] text-muted">{{ metrics()!.porCanal.movil.ordenes }} ord.</div>
               </div>
             </div>
           </div>
 
           <!-- Insumos con menor existencia -->
-          <div class="space-y-2 border-t border-zinc-800 pt-4">
+          <div class="space-y-2 border-t border-line pt-4">
             <div class="flex items-center justify-between">
-              <h3 class="font-bold text-xs text-zinc-300 uppercase tracking-wider">Insumos con Menor Stock</h3>
-              <a routerLink="/admin/inventory" class="text-[11px] text-red-400 hover:text-red-300 font-semibold">Ver todo →</a>
+              <h3 class="font-bold text-xs text-muted uppercase tracking-wider">Insumos con Menor Stock</h3>
+              <a routerLink="/admin/inventory" class="text-[11px] text-brand hover:underline font-semibold">Ver todo →</a>
             </div>
 
             @if (metrics()!.ingredientesMenorStock.length === 0) {
-              <p class="text-xs text-zinc-500">Sin insumos registrados.</p>
+              <p class="text-xs text-muted">Sin insumos registrados.</p>
             } @else {
               <div class="space-y-1.5">
                 @for (ing of metrics()!.ingredientesMenorStock.slice(0, 4); track ing.id) {
-                  <div class="flex items-center justify-between text-xs bg-[#111111] px-2.5 py-1.5 rounded-lg border border-zinc-800/80">
-                    <span class="text-zinc-300 truncate pr-2">{{ ing.nombre }}</span>
+                  <div class="flex items-center justify-between text-xs bg-input px-2.5 py-1.5 rounded-lg border border-line">
+                    <span class="text-main truncate pr-2">{{ ing.nombre }}</span>
                     <span 
                       class="font-mono font-bold shrink-0"
-                      [ngClass]="ing.stockActual <= 5 ? 'text-red-400' : 'text-amber-300'">
+                      [ngClass]="ing.stockActual <= 5 ? 'text-brand' : 'text-amber-500'">
                       {{ ing.stockActual | number:'1.0-2' }} {{ ing.unidadMedida }}
                     </span>
                   </div>
@@ -335,37 +344,37 @@
       <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         
         <!-- Top Platillos Más Vendidos -->
-        <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-5 space-y-4">
+        <div class="bg-card border border-line rounded-2xl p-5 space-y-4 shadow-2xs">
           <div>
-            <h2 class="font-bold text-sm text-white">🏆 Platillos Más Vendidos</h2>
-            <p class="text-[11px] text-zinc-400">Ordenados por volumen de unidades solicitadas</p>
+            <h2 class="font-bold text-sm text-main">🏆 Platillos Más Vendidos</h2>
+            <p class="text-[11px] text-muted">Ordenados por volumen de unidades solicitadas</p>
           </div>
 
           @if (metrics()!.topVendidos.length === 0) {
-            <div class="py-10 text-center text-xs text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
+            <div class="py-10 text-center text-xs text-muted border border-dashed border-line rounded-xl">
               Aún no hay ventas registradas en este periodo.
             </div>
           } @else {
             <div class="space-y-2.5">
               @for (item of metrics()!.topVendidos; track item.productoId; let i = $index) {
-                <div class="bg-[#111111] border border-zinc-800/90 rounded-xl p-3 flex items-center justify-between gap-3">
+                <div class="bg-input border border-line rounded-xl p-3 flex items-center justify-between gap-3">
                   <div class="flex items-center gap-3 min-w-0">
                     <span 
                       class="w-7 h-7 rounded-lg font-mono font-black text-xs flex items-center justify-center shrink-0"
-                      [ngClass]="i === 0 ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-300'">
+                      [ngClass]="i === 0 ? 'bg-amber-500 text-black' : 'bg-hover text-muted'">
                       #{{ i + 1 }}
                     </span>
                     <div class="min-w-0">
-                      <div class="font-bold text-xs sm:text-sm text-white truncate">{{ item.nombre }}</div>
-                      <div class="text-[11px] text-zinc-500">{{ item.categoria }}</div>
+                      <div class="font-bold text-xs sm:text-sm text-main truncate">{{ item.nombre }}</div>
+                      <div class="text-[11px] text-muted">{{ item.categoria }}</div>
                     </div>
                   </div>
 
                   <div class="text-right shrink-0">
-                    <div class="font-mono font-black text-sm text-emerald-400">
+                    <div class="font-mono font-black text-sm text-emerald-500">
                       {{ item.cantidadVendida }} uds
                     </div>
-                    <div class="font-mono text-[11px] text-zinc-400">
+                    <div class="font-mono text-[11px] text-muted">
                       {{ item.ingresos | currency:'MXN':'symbol-narrow':'1.0-0' }}
                     </div>
                   </div>
@@ -376,24 +385,24 @@
         </div>
 
         <!-- Cuellos de Botella en Cocina (Tiempos reales por platillo) -->
-        <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-5 space-y-4">
+        <div class="bg-card border border-line rounded-2xl p-5 space-y-4 shadow-2xs">
           <div>
-            <h2 class="font-bold text-sm text-white">⏱️ Tiempos por Platillo (Cuellos de Botella)</h2>
-            <p class="text-[11px] text-zinc-400">Platillos con mayor tiempo promedio desde inicio hasta salida en KDS</p>
+            <h2 class="font-bold text-sm text-main">⏱️ Tiempos por Platillo (Cuellos de Botella)</h2>
+            <p class="text-[11px] text-muted">Platillos con mayor tiempo promedio desde inicio hasta salida en KDS</p>
           </div>
 
           @if (metrics()!.cuellosBotella.length === 0) {
-            <div class="py-10 text-center text-xs text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
+            <div class="py-10 text-center text-xs text-muted border border-dashed border-line rounded-xl">
               Completa platillos en el Monitor de Cocina (KDS) para medir tiempos de preparación.
             </div>
           } @else {
             <div class="space-y-3">
               @for (item of metrics()!.cuellosBotella; track item.productoId) {
-                <div class="bg-[#111111] border border-zinc-800/90 rounded-xl p-3 space-y-2">
+                <div class="bg-input border border-line rounded-xl p-3 space-y-2">
                   <div class="flex items-center justify-between gap-2">
                     <div class="min-w-0">
-                      <div class="font-bold text-xs sm:text-sm text-white truncate">{{ item.nombre }}</div>
-                      <div class="text-[11px] text-zinc-500">
+                      <div class="font-bold text-xs sm:text-sm text-main truncate">{{ item.nombre }}</div>
+                      <div class="text-[11px] text-muted">
                         {{ item.muestrasTiempo }} salidas medidas · Espera previa: {{ item.tiempoPromedioEsperaMin }} min
                       </div>
                     </div>
@@ -401,21 +410,21 @@
                     <span 
                       class="px-2.5 py-1 rounded-lg font-mono font-black text-xs shrink-0 border"
                       [ngClass]="(item.tiempoPromedioPrepMin || 0) > 12 
-                        ? 'bg-red-950/80 text-red-300 border-red-500/40' 
+                        ? 'bg-red-500/15 text-brand border-brand/40' 
                         : (item.tiempoPromedioPrepMin || 0) > 7 
-                          ? 'bg-amber-950/80 text-amber-300 border-amber-500/40' 
-                          : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'">
+                          ? 'bg-amber-500/15 text-amber-500 border-amber-500/40' 
+                          : 'bg-emerald-500/15 text-emerald-500 border-emerald-500/40'">
                       {{ item.tiempoPromedioPrepMin }} min
                     </span>
                   </div>
 
                   <!-- Barra visual de demora -->
-                  <div class="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
+                  <div class="w-full h-2 rounded-full bg-hover overflow-hidden">
                     <div 
                       class="h-full rounded-full transition-all"
                       [style.width.%]="getBottleneckWidthPercent(item.tiempoPromedioPrepMin)"
                       [ngClass]="(item.tiempoPromedioPrepMin || 0) > 12 
-                        ? 'bg-red-500' 
+                        ? 'bg-brand' 
                         : (item.tiempoPromedioPrepMin || 0) > 7 
                           ? 'bg-amber-500' 
                           : 'bg-emerald-500'">
@@ -429,45 +438,45 @@
 
       </section>
 
-      <!-- ==================== NUEVO: REPORTE DE DESEMPEÑO POR MESERO ==================== -->
-      <section class="bg-[#181818] border border-zinc-800 rounded-2xl p-5 space-y-4">
+      <!-- ==================== REPORTE DE DESEMPEÑO POR MESERO ==================== -->
+      <section class="bg-card border border-line rounded-2xl p-5 space-y-4 shadow-2xs">
         <div>
-          <h2 class="font-bold text-sm text-white">👨‍🍳 Desempeño por Mesero</h2>
-          <p class="text-[11px] text-zinc-400">Ranking de ventas y cancelaciones por empleado en el periodo</p>
+          <h2 class="font-bold text-sm text-main">👨‍🍳 Desempeño por Mesero</h2>
+          <p class="text-[11px] text-muted">Ranking de ventas y cancelaciones por empleado en el periodo</p>
         </div>
 
         @if (metrics()!.ventasPorMesero.length === 0) {
-          <div class="py-10 text-center text-xs text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
+          <div class="py-10 text-center text-xs text-muted border border-dashed border-line rounded-xl">
             Aún no hay registros de ventas por mesero en este periodo.
           </div>
         } @else {
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse text-xs sm:text-sm">
               <thead>
-                <tr class="bg-[#111111] border-b border-zinc-800 text-zinc-400 uppercase text-[10px] sm:text-xs tracking-wider">
+                <tr class="bg-input border-b border-line text-muted uppercase text-[10px] sm:text-xs tracking-wider">
                   <th class="py-3 px-4 font-semibold">Mesero</th>
                   <th class="py-3 px-4 font-semibold text-right">Ventas Totales</th>
                   <th class="py-3 px-4 font-semibold text-center">Órdenes Pagadas</th>
-                  <th class="py-3 px-4 font-semibold text-center text-red-400">Canceladas</th>
-                  <th class="py-3 px-4 font-semibold text-right text-red-400">Monto Cancelado</th>
+                  <th class="py-3 px-4 font-semibold text-center text-brand">Canceladas</th>
+                  <th class="py-3 px-4 font-semibold text-right text-brand">Monto Cancelado</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-zinc-800/60">
+              <tbody class="divide-y divide-line">
                 @for (m of metrics()!.ventasPorMesero; track m.meseroId) {
-                  <tr class="hover:bg-[#1c1c1c]/50 transition-colors">
+                  <tr class="hover:bg-hover/50 transition-colors">
                     <td class="py-3 px-4">
-                      <div class="font-bold text-white">{{ m.nombre }}</div>
+                      <div class="font-bold text-main">{{ m.nombre }}</div>
                     </td>
-                    <td class="py-3 px-4 text-right font-mono font-bold text-emerald-400">
+                    <td class="py-3 px-4 text-right font-mono font-bold text-emerald-500">
                       {{ m.ventasTotales | currency:'MXN':'symbol-narrow':'1.2-2' }}
                     </td>
-                    <td class="py-3 px-4 text-center font-mono text-zinc-300">
+                    <td class="py-3 px-4 text-center font-mono text-main">
                       {{ m.ordenesPagadas }}
                     </td>
-                    <td class="py-3 px-4 text-center font-mono" [ngClass]="m.ordenesCanceladas > 0 ? 'text-red-400 font-bold' : 'text-zinc-500'">
+                    <td class="py-3 px-4 text-center font-mono" [ngClass]="m.ordenesCanceladas > 0 ? 'text-brand font-bold' : 'text-muted'">
                       {{ m.ordenesCanceladas }}
                     </td>
-                    <td class="py-3 px-4 text-right font-mono" [ngClass]="m.montoCancelado > 0 ? 'text-red-400' : 'text-zinc-500'">
+                    <td class="py-3 px-4 text-right font-mono" [ngClass]="m.montoCancelado > 0 ? 'text-brand' : 'text-muted'">
                       {{ m.montoCancelado | currency:'MXN':'symbol-narrow':'1.2-2' }}
                     </td>
                   </tr>

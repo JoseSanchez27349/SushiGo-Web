@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
 import { RealtimeService } from '../../../../core/services/realtime.service';
+import { ThemeService } from '../../../../services/theme.service';
 import {
   EstadoCocina,
   KitchenComanda,
@@ -22,6 +23,7 @@ export class KitchenDashboardComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private router = inject(Router);
   private authService = inject(AuthService);
+  themeService = inject(ThemeService);
   private realtimeService = inject(RealtimeService);
 
   private apiUrl = 'http://localhost:3000/api/v1/cocina';

@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
 import { RealtimeService } from '../../../../core/services/realtime.service';
 import { PosTurnoModalComponent } from '../turno-modaL/pos-turno-modal.component';
+import { ThemeService } from '../../../../services/theme.service';
 
 export interface PosCategory {
   id: number | string;
@@ -97,6 +98,7 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private router = inject(Router);
   private authService = inject(AuthService);
+  themeService = inject(ThemeService);
   private realtimeService = inject(RealtimeService);
 
   private baseApi = 'http://localhost:3000/api/v1';
@@ -280,7 +282,7 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
     if (this.feedbackTimeout) clearTimeout(this.feedbackTimeout);
   }
 
-  private setupRealtime(): void {
+    private setupRealtime(): void {
     const rt = this.realtimeService as any;
 
     if (rt.socket) {
@@ -289,21 +291,27 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
       rt.socket.on('disconnect', () => this.socketConnected.set(false));
     }
 
-    if (typeof rt.onOrdenActualizada === 'function') {
+    // 🛠️ CORRECCIÓN: Usar onPosOrdenActualizada
+    if (typeof rt.onPosOrdenActualizada === 'function') {
       this.sub.add(
-        rt.onOrdenActualizada().subscribe((payload: any) => {
+        rt.onPosOrdenActualizada().subscribe((payload: any) => {
+          console.log('🔔 Evento recibido de cocina en el POS:', payload);
+          
           this.loadOrdenesActivas();
           this.loadMesas();
+          
           if (payload?.ordenCompletaLista && this.soundEnabled()) {
             this.playNotificationBeep();
+            this.showFeedback('¡Orden lista para cobrar!', 'success');
           }
         }),
       );
     }
 
-    if (typeof rt.onNuevaOrden === 'function') {
+    // 🛠️ CORRECCIÓN: Usar onNuevaComanda (era el nombre real en tu servicio)
+    if (typeof rt.onNuevaComanda === 'function') {
       this.sub.add(
-        rt.onNuevaOrden().subscribe(() => {
+        rt.onNuevaComanda().subscribe(() => {
           this.loadOrdenesActivas();
           this.loadMesas();
         }),

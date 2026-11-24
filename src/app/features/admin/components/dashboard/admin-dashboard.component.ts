@@ -7,6 +7,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { RealtimeService } from '../../../../core/services/realtime.service';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { ThemeService } from '../../../../services/theme.service';
 
 export interface ProductMetricItem {
   productoId: string;
@@ -78,7 +79,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private router = inject(Router);
   private authService = inject(AuthService);
-  private realtimeService = inject(RealtimeService);
+  private realtimeService = inject(RealtimeService); 
+  themeService = inject(ThemeService); 
 
   private apiUrl = 'http://localhost:3000/api/v1/admin/dashboard';
   private realtimeSub = new Subscription();

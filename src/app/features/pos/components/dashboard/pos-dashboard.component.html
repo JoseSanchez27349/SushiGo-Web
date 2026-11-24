@@ -1,24 +1,24 @@
-<div class="h-screen overflow-hidden bg-[#0d0d0d] text-white flex flex-col font-sans select-none">
+<div class="h-screen overflow-hidden bg-app text-main flex flex-col font-sans select-none">
 
   <!-- Navbar Superior POS -->
-  <header class="bg-[#181818] border-b border-zinc-800 px-4 py-2.5 flex items-center justify-between gap-3 shrink-0 z-30">
+  <header class="bg-card border-b border-line px-4 py-2.5 flex items-center justify-between gap-3 shrink-0 z-30 shadow-2xs">
     
     <!-- Marca & Usuario -->
     <div class="flex items-center gap-3">
-      <div class="w-9 h-9 bg-[#ab2424] text-white rounded-xl flex items-center justify-center font-black text-lg shadow">
-        🍣
-      </div>
+      <div class="w-9 h-9 bg-white border border-line rounded-xl p-1 flex items-center justify-center overflow-hidden shadow-2xs shrink-0">
+  <img src="logo-sushigo.jpeg" alt="Logo SushiGo" class="w-full h-full object-contain" />
+</div>
       <div class="hidden sm:block">
         <div class="flex items-center gap-1.5">
           <h1 class="font-bold text-sm tracking-wide leading-tight">SushiGo POS</h1>
           <span 
             [title]="socketConnected() ? 'Conectado en tiempo real' : 'Reconectando...'"
             class="w-2 h-2 rounded-full"
-            [ngClass]="socketConnected() ? 'bg-emerald-400' : 'bg-red-500 animate-ping'">
+            [ngClass]="socketConnected() ? 'bg-emerald-500' : 'bg-brand animate-ping'">
           </span>
         </div>
-        <p class="text-[11px] text-zinc-400">
-          {{ user()?.nombre }} · <span class="text-red-400 font-semibold">{{ user()?.role }}</span>
+        <p class="text-[11px] text-muted">
+          {{ user()?.nombre }} · <span class="text-brand font-semibold">{{ user()?.role }}</span>
         </p>
       </div>
     </div>
@@ -31,12 +31,12 @@
           [ngModel]="searchQuery()"
           (ngModelChange)="searchQuery.set($event)"
           placeholder="Buscar rollo, bebida o entrada..."
-          class="w-full h-9 bg-[#111111] border border-zinc-800 rounded-xl pl-3.5 pr-8 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-red-500" />
+          class="w-full h-9 bg-input border border-line rounded-xl pl-3.5 pr-8 text-xs sm:text-sm text-main placeholder-muted focus:outline-none focus:border-brand" />
         @if (searchQuery()) {
           <button 
             type="button"
             (click)="searchQuery.set('')"
-            class="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white text-sm font-bold">
+            class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main text-sm font-bold">
             &times;
           </button>
         }
@@ -51,8 +51,8 @@
         (click)="isTurnoModalOpen.set(true)"
         class="h-9 px-3 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
         [ngClass]="turnoActivo()
-          ? 'bg-emerald-950/70 hover:bg-emerald-900/70 border-emerald-500/40 text-emerald-300'
-          : 'bg-amber-950/70 hover:bg-amber-900/70 border-amber-500/50 text-amber-300 animate-pulse'">
+          ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/40 text-emerald-500'
+          : 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/50 text-amber-500 animate-pulse'">
         <span>💵</span>
         @if (turnoActivo()) {
           <span class="hidden sm:inline">Gaveta:</span>
@@ -67,7 +67,7 @@
         type="button"
         (click)="abrirHistorial()"
         title="Ver mis cortes de caja anteriores"
-        class="h-9 px-3 bg-[#222222] hover:bg-zinc-700 active:scale-95 text-zinc-300 text-xs font-semibold rounded-xl border border-zinc-700 transition-all flex items-center gap-1.5">
+        class="h-9 px-3 bg-hover hover:opacity-80 active:scale-95 text-main text-xs font-semibold rounded-xl border border-line transition-all flex items-center gap-1.5">
         <span>📋</span>
         <span class="hidden sm:inline">Mi Historial</span>
       </button>
@@ -77,11 +77,11 @@
         (click)="openOrdersModal('todas')"
         class="h-9 px-3 text-xs font-semibold rounded-xl border flex items-center gap-1.5 transition-all active:scale-95"
         [ngClass]="ordenesListas().length > 0 
-          ? 'bg-emerald-950/70 hover:bg-emerald-900/70 text-emerald-200 border-emerald-500/60 shadow-lg shadow-emerald-950/40' 
-          : 'bg-[#222222] hover:bg-zinc-700 text-zinc-200 border-zinc-700'">
+          ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500 border-emerald-500/60 shadow-sm' 
+          : 'bg-hover hover:opacity-80 text-main border-line'">
         <span>💳</span>
         <span class="hidden sm:inline">Cuentas / Cobrar</span>
-        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#ab2424] text-white">
+        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-brand text-white">
           {{ ordenesActivas().length }}
         </span>
         @if (ordenesListas().length > 0) {
@@ -93,12 +93,20 @@
 
       <button 
         type="button"
+        (click)="themeService.toggleTheme()"
+        title="Cambiar entre modo claro y oscuro"
+        class="h-9 px-3 rounded-xl bg-hover hover:opacity-80 text-main text-xs font-semibold border border-line transition-all active:scale-95">
+        {{ themeService.isLight() ? '🌙' : '☀️' }}
+      </button>
+
+      <button 
+        type="button"
         (click)="toggleSound()"
         title="Activar o silenciar alertas sonoras de cocina"
         class="h-9 px-3 rounded-xl text-xs font-semibold border transition-all"
         [ngClass]="soundEnabled() 
-          ? 'bg-[#222222] border-zinc-700 text-amber-300 hover:bg-zinc-700' 
-          : 'bg-[#181818] border-zinc-800 text-zinc-500'">
+          ? 'bg-hover border-line text-amber-500 hover:opacity-80' 
+          : 'bg-card border-line text-muted'">
         {{ soundEnabled() ? '🔔' : '🔕' }}
       </button>
 
@@ -106,23 +114,23 @@
         type="button"
         (click)="refreshAll()"
         title="Actualizar menú, mesas y stock"
-        class="h-9 px-3 bg-[#222222] hover:bg-zinc-700 active:scale-95 text-zinc-300 text-xs font-semibold rounded-xl border border-zinc-700 transition-all">
+        class="h-9 px-3 bg-hover hover:opacity-80 active:scale-95 text-main text-xs font-semibold rounded-xl border border-line transition-all">
         🔄
       </button>
 
       @if (isAdmin()) {
-        <div class="hidden md:flex items-center bg-[#111111] border border-zinc-800 rounded-xl p-0.5 text-xs font-semibold">
-          <span class="px-2.5 py-1.5 rounded-lg bg-[#ab2424] text-white shadow">
+        <div class="hidden md:flex items-center bg-input border border-line rounded-xl p-0.5 text-xs font-semibold">
+          <span class="px-2.5 py-1.5 rounded-lg bg-brand text-white shadow">
             POS
           </span>
           <a 
             routerLink="/kitchen"
-            class="px-2.5 py-1.5 rounded-lg text-zinc-400 hover:text-white transition-colors">
+            class="px-2.5 py-1.5 rounded-lg text-muted hover:text-main transition-colors">
             Cocina
           </a>
           <a 
             routerLink="/admin"
-            class="px-2.5 py-1.5 rounded-lg text-zinc-400 hover:text-white transition-colors">
+            class="px-2.5 py-1.5 rounded-lg text-muted hover:text-main transition-colors">
             Admin
           </a>
         </div>
@@ -131,7 +139,7 @@
       <button 
         type="button"
         (click)="onLogout()"
-        class="h-9 px-3 bg-[#222222] hover:bg-red-950/50 text-zinc-300 hover:text-red-400 border border-zinc-800 hover:border-red-800/50 text-xs font-semibold rounded-xl transition-all active:scale-95">
+        class="h-9 px-3 bg-hover hover:bg-brand/15 text-main hover:text-brand border border-line hover:border-brand/40 text-xs font-semibold rounded-xl transition-all active:scale-95">
         Salir
       </button>
     </div>
@@ -139,9 +147,9 @@
 
   <!-- Barra en Vivo de Estados en Cocina -->
   @if (ordenesActivas().length > 0) {
-    <div class="bg-[#131313] border-b border-zinc-800 px-4 py-2 flex items-center justify-between gap-2 shrink-0 overflow-x-auto">
+    <div class="bg-input border-b border-line px-4 py-2 flex items-center justify-between gap-2 shrink-0 overflow-x-auto">
       <div class="flex items-center gap-2 text-xs whitespace-nowrap">
-        <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 mr-1">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-muted mr-1">
           Cocina:
         </span>
 
@@ -151,8 +159,8 @@
           (click)="openOrdersModal('sin_iniciar')"
           class="px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5"
           [ngClass]="ordenesSinIniciar().length > 0 
-            ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border-zinc-700' 
-            : 'bg-[#181818] text-zinc-600 border-zinc-800/80'">
+            ? 'bg-card hover:bg-hover text-main border-line shadow-2xs' 
+            : 'bg-card/50 text-muted border-line/60'">
           <span>⏳ Sin iniciar:</span>
           <strong class="font-mono">{{ ordenesSinIniciar().length }}</strong>
         </button>
@@ -163,8 +171,8 @@
           (click)="openOrdersModal('en_preparacion')"
           class="px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5"
           [ngClass]="ordenesEnPreparacion().length > 0 
-            ? 'bg-amber-950/60 hover:bg-amber-900/60 text-amber-200 border-amber-500/40' 
-            : 'bg-[#181818] text-zinc-600 border-zinc-800/80'">
+            ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 border-amber-500/40' 
+            : 'bg-card/50 text-muted border-line/60'">
           <span>🔥 En preparación:</span>
           <strong class="font-mono">{{ ordenesEnPreparacion().length }}</strong>
         </button>
@@ -175,20 +183,20 @@
           (click)="openOrdersModal('listo')"
           class="px-2.5 py-1 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5"
           [ngClass]="ordenesListas().length > 0 
-            ? 'bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-200 border-emerald-500/50 shadow' 
-            : 'bg-[#181818] text-zinc-600 border-zinc-800/80'">
+            ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500 border-emerald-500/50 shadow-2xs' 
+            : 'bg-card/50 text-muted border-line/60'">
           <span>✅ Listos:</span>
           <strong class="font-mono">{{ ordenesListas().length }}</strong>
         </button>
 
         <!-- Etiquetas rápidas de folios listos -->
         @if (ordenesListas().length > 0) {
-          <div class="hidden md:flex items-center gap-1.5 pl-2 border-l border-zinc-800">
+          <div class="hidden md:flex items-center gap-1.5 pl-2 border-l border-line">
             @for (lista of ordenesListas(); track lista.id) {
               <button 
                 type="button"
                 (click)="openCheckoutModal(lista)"
-                class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 transition-colors">
+                class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500 border border-emerald-500/40 transition-colors">
                 🔔 {{ formatFolio(lista) }} ({{ lista.mesa ? getMesaLabel(lista.mesa) : 'Llevar' }})
               </button>
             }
@@ -199,7 +207,7 @@
       <button 
         type="button"
         (click)="openOrdersModal('todas')"
-        class="text-[11px] font-bold text-zinc-400 hover:text-white shrink-0">
+        class="text-[11px] font-bold text-muted hover:text-main shrink-0">
         Ver cuentas →
       </button>
     </div>
@@ -208,11 +216,11 @@
   <!-- Notificación flotante -->
   @if (feedbackMessage()) {
     <div 
-      class="fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold shadow-2xl border flex items-center gap-3"
+      class="fixed top-16 left-1/2 -translate-x-1/2 z-[60] bg-card px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold shadow-2xl border flex items-center gap-3"
       [ngClass]="{
-        'bg-emerald-950/95 border-emerald-500/50 text-emerald-200': feedbackType() === 'success',
-        'bg-amber-950/95 border-amber-500/50 text-amber-200': feedbackType() === 'warning',
-        'bg-red-950/95 border-red-500/50 text-red-200': feedbackType() === 'error'
+        'border-emerald-500/50 text-emerald-500': feedbackType() === 'success',
+        'border-amber-500/50 text-amber-500': feedbackType() === 'warning',
+        'border-brand/50 text-brand': feedbackType() === 'error'
       }">
       <span>{{ feedbackMessage() }}</span>
       <button type="button" (click)="feedbackMessage.set('')" class="font-bold opacity-75 hover:opacity-100">&times;</button>
@@ -231,7 +239,7 @@
           type="button"
           (click)="selectedCategoryId.set(null)"
           class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all border"
-          [ngClass]="selectedCategoryId() === null ? 'bg-[#ab2424] text-white border-red-500 shadow' : 'bg-[#181818] text-zinc-400 border-zinc-800 hover:text-white'">
+          [ngClass]="selectedCategoryId() === null ? 'bg-brand text-white border-brand shadow' : 'bg-card text-muted border-line hover:text-main'">
           Todos ({{ productos().length }})
         </button>
 
@@ -240,7 +248,7 @@
             type="button"
             (click)="selectedCategoryId.set(cat.id)"
             class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all border"
-            [ngClass]="selectedCategoryId() === cat.id ? 'bg-[#ab2424] text-white border-red-500 shadow' : 'bg-[#181818] text-zinc-400 border-zinc-800 hover:text-white'">
+            [ngClass]="selectedCategoryId() === cat.id ? 'bg-brand text-white border-brand shadow' : 'bg-card text-muted border-line hover:text-main'">
             {{ cat.nombre }}
           </button>
         }
@@ -248,13 +256,13 @@
 
       <!-- Grid de Productos -->
       @if (isLoading()) {
-        <div class="flex-1 flex flex-col items-center justify-center text-zinc-400 text-sm gap-2">
-          <span class="w-7 h-7 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></span>
+        <div class="flex-1 flex flex-col items-center justify-center text-muted text-sm gap-2">
+          <span class="w-7 h-7 border-2 border-brand border-t-transparent rounded-full animate-spin"></span>
           <span>Cargando menú del restaurante...</span>
         </div>
       } @else if (filteredProductos().length === 0) {
-        <div class="flex-1 flex flex-col items-center justify-center text-zinc-500 text-sm border border-dashed border-zinc-800 rounded-2xl p-8 text-center">
-          <p class="font-semibold text-zinc-300 mb-1">No hay productos para mostrar</p>
+        <div class="flex-1 flex flex-col items-center justify-center text-muted text-sm border border-dashed border-line rounded-2xl p-8 text-center">
+          <p class="font-semibold text-main mb-1">No hay productos para mostrar</p>
           <p class="text-xs">Prueba seleccionando otra categoría o limpiando el filtro de búsqueda.</p>
         </div>
       } @else {
@@ -263,21 +271,21 @@
             @for (prod of filteredProductos(); track prod.id) {
               <div 
                 (click)="addToCart(prod)"
-                class="relative text-left bg-[#181818] border rounded-2xl p-3 flex flex-col justify-between transition-all shadow-md"
+                class="relative text-left bg-card border rounded-2xl p-3 flex flex-col justify-between transition-all shadow-2xs"
                 [ngClass]="isProductAvailable(prod) 
-                  ? 'border-zinc-800/90 hover:border-red-500/60 hover:bg-[#1f1f1f] active:scale-[0.98] cursor-pointer' 
-                  : 'border-zinc-900 opacity-50 cursor-not-allowed'">
+                  ? 'border-line hover:border-brand/60 hover:bg-hover/60 active:scale-[0.98] cursor-pointer' 
+                  : 'border-line opacity-50 cursor-not-allowed'">
 
                 <!-- Badge cantidad agregada en comanda -->
                 @if (cartQuantityMap()[prod.id]) {
-                  <span class="absolute -top-2 -right-2 w-7 h-7 bg-[#ab2424] text-white font-mono font-black text-xs rounded-full flex items-center justify-center shadow-lg border-2 border-[#0d0d0d] z-10">
+                  <span class="absolute -top-2 -right-2 w-7 h-7 bg-brand text-white font-mono font-black text-xs rounded-full flex items-center justify-center shadow-lg border-2 border-app z-10">
                     {{ cartQuantityMap()[prod.id] }}
                   </span>
                 }
 
                 <div>
                   <!-- Imagen o Icono -->
-                  <div class="w-full h-24 sm:h-28 rounded-xl bg-[#111111] border border-zinc-800/80 mb-2.5 overflow-hidden flex items-center justify-center relative">
+                  <div class="w-full h-24 sm:h-28 rounded-xl bg-input border border-line mb-2.5 overflow-hidden flex items-center justify-center relative">
                     @if (prod.urlImagen) {
                       <img [src]="prod.urlImagen" [alt]="prod.nombre" class="w-full h-full object-cover" />
                     } @else {
@@ -286,41 +294,41 @@
 
                     <!-- Etiqueta de disponibilidad / stock -->
                     @if (!prod.estaDisponible) {
-                      <span class="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-950/90 text-red-300 border border-red-500/40">
+                      <span class="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-card/95 text-brand border border-brand/40 shadow-2xs">
                         No disponible
                       </span>
                     } @else if (prod.disponibleParaVenta === false) {
-                      <span class="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-950/95 text-amber-300 border border-amber-500/40">
+                      <span class="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-card/95 text-amber-500 border border-amber-500/40 shadow-2xs">
                         Agotado
                       </span>
                     } @else if (prod.porcionesDisponibles !== null && prod.porcionesDisponibles !== undefined && prod.porcionesDisponibles <= 5) {
-                      <span class="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-zinc-900/90 text-amber-300 border border-amber-500/30">
+                      <span class="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-card/95 text-amber-500 border border-amber-500/30 shadow-2xs">
                         Quedan {{ prod.porcionesDisponibles }}
                       </span>
                     }
                   </div>
 
                   <!-- Categoría y Nombre -->
-                  <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">
+                  <span class="text-[10px] uppercase tracking-wider text-muted font-semibold">
                     {{ prod.categoria.nombre }}
                   </span>
-                  <h3 class="font-bold text-xs sm:text-sm text-white leading-snug line-clamp-2 mt-0.5">
+                  <h3 class="font-bold text-xs sm:text-sm text-main leading-snug line-clamp-2 mt-0.5">
                     {{ prod.nombre }}
                   </h3>
                   @if (prod.descripcion) {
-                    <p class="text-[11px] text-zinc-500 line-clamp-1 mt-1">
+                    <p class="text-[11px] text-muted line-clamp-1 mt-1">
                       {{ prod.descripcion }}
                     </p>
                   }
                 </div>
 
                 <!-- Precio -->
-                <div class="mt-3 pt-2 border-t border-zinc-800/70 flex items-center justify-between">
-                  <span class="font-mono font-black text-sm sm:text-base text-emerald-400">
+                <div class="mt-3 pt-2 border-t border-line flex items-center justify-between">
+                  <span class="font-mono font-black text-sm sm:text-base text-emerald-500">
                     {{ prod.precio | currency:'MXN':'symbol-narrow':'1.2-2' }}
                   </span>
                   @if (isProductAvailable(prod)) {
-                    <span class="text-[11px] font-bold text-zinc-400">+ Agregar</span>
+                    <span class="text-[11px] font-bold text-muted">+ Agregar</span>
                   }
                 </div>
 
@@ -332,23 +340,23 @@
     </section>
 
     <!-- ==================== PANEL DERECHO: COMANDA / TICKET ==================== -->
-    <aside class="w-full lg:w-96 bg-[#141414] border-t lg:border-t-0 lg:border-l border-zinc-800 flex flex-col shrink-0 h-[48vh] lg:h-full">
+    <aside class="w-full lg:w-96 bg-input border-t lg:border-t-0 lg:border-l border-line flex flex-col shrink-0 h-[48vh] lg:h-full">
       
       <!-- Header Comanda + Tipo de Orden + Mesa -->
-      <div class="p-3 bg-[#181818] border-b border-zinc-800 space-y-2.5 shrink-0">
+      <div class="p-3 bg-card border-b border-line space-y-2.5 shrink-0">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="font-bold text-sm text-white">
+            <h2 class="font-bold text-sm text-main">
               {{ appendTargetOrder() ? 'Agregar Ronda a Cuenta' : 'Comanda Actual' }}
             </h2>
-            <p class="text-[11px] text-zinc-400">{{ totalArticulos() }} artículos</p>
+            <p class="text-[11px] text-muted">{{ totalArticulos() }} artículos</p>
           </div>
 
           @if (cart().length > 0) {
             <button 
               type="button"
               (click)="clearCart()"
-              class="text-xs text-red-400 hover:text-red-300 font-semibold px-2.5 py-1 rounded-lg hover:bg-red-950/40 transition-colors">
+              class="text-xs text-brand hover:opacity-80 font-semibold px-2.5 py-1 rounded-lg hover:bg-brand/15 transition-colors">
               Limpiar
             </button>
           }
@@ -356,12 +364,12 @@
 
         <!-- Banner Modo Ronda Adicional -->
         @if (appendTargetOrder(); as target) {
-          <div class="bg-sky-950/70 border border-sky-500/40 rounded-xl px-3 py-2 flex items-center justify-between gap-2 text-xs">
+          <div class="bg-sky-500/15 border border-sky-500/40 rounded-xl px-3 py-2 flex items-center justify-between gap-2 text-xs">
             <div class="min-w-0">
-              <div class="font-bold text-sky-200 truncate">
+              <div class="font-bold text-sky-500 truncate">
                 ➕ Sumando a {{ formatFolio(target) }} ({{ target.mesa ? getMesaLabel(target.mesa) : 'Para Llevar' }})
               </div>
-              <div class="text-[10px] text-sky-300/80">
+              <div class="text-[10px] text-sky-500/80">
                 Saldo actual: {{ target.total | currency:'MXN':'symbol-narrow':'1.2-2' }}
               </div>
             </div>
@@ -369,13 +377,13 @@
               type="button"
               (click)="clearAppendTarget()"
               title="Crear cuenta nueva por separado"
-              class="px-2 py-1 rounded-lg bg-sky-900/80 hover:bg-sky-800 text-[10px] font-bold text-sky-200 shrink-0">
+              class="px-2 py-1 rounded-lg bg-sky-500 hover:bg-sky-600 text-[10px] font-bold text-white shrink-0">
               Nueva cuenta
             </button>
           </div>
         } @else if (activeOrderForSelectedMesa()) {
-          <div class="bg-amber-950/50 border border-amber-500/30 rounded-xl px-3 py-1.5 flex items-center justify-between gap-2 text-[11px]">
-            <span class="text-amber-200 truncate">
+          <div class="bg-amber-500/15 border border-amber-500/30 rounded-xl px-3 py-1.5 flex items-center justify-between gap-2 text-[11px]">
+            <span class="text-amber-500 font-semibold truncate">
               Mesa con cuenta {{ formatFolio(activeOrderForSelectedMesa()!) }}
             </span>
             <button 
@@ -388,19 +396,19 @@
         }
 
         <!-- Selector Tipo de Orden -->
-        <div class="grid grid-cols-2 gap-1.5 bg-[#111111] p-1 rounded-xl border border-zinc-800">
+        <div class="grid grid-cols-2 gap-1.5 bg-input p-1 rounded-xl border border-line">
           <button 
             type="button"
             (click)="setTipoOrden('comedor')"
             class="py-1.5 rounded-lg text-xs font-bold transition-all"
-            [ngClass]="tipoOrden() === 'comedor' ? 'bg-[#ab2424] text-white shadow' : 'text-zinc-400 hover:text-white'">
+            [ngClass]="tipoOrden() === 'comedor' ? 'bg-brand text-white shadow' : 'text-muted hover:text-main'">
             🍽️ Comedor
           </button>
           <button 
             type="button"
             (click)="setTipoOrden('llevar')"
             class="py-1.5 rounded-lg text-xs font-bold transition-all"
-            [ngClass]="tipoOrden() === 'llevar' ? 'bg-[#ab2424] text-white shadow' : 'text-zinc-400 hover:text-white'">
+            [ngClass]="tipoOrden() === 'llevar' ? 'bg-brand text-white shadow' : 'text-muted hover:text-main'">
             🛍️ Para Llevar
           </button>
         </div>
@@ -409,7 +417,7 @@
         @if (tipoOrden() === 'comedor') {
           <div>
             @if (mesas().length === 0) {
-              <div class="text-[11px] text-amber-400 bg-amber-950/40 border border-amber-500/30 rounded-lg px-2.5 py-1.5">
+              <div class="text-[11px] text-amber-500 bg-amber-500/15 border border-amber-500/30 rounded-lg px-2.5 py-1.5">
                 No hay mesas registradas en el sistema.
               </div>
             } @else {
@@ -421,17 +429,17 @@
                     [disabled]="mesa.estado === 'mantenimiento'"
                     class="px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-all flex items-center gap-1.5"
                     [ngClass]="{
-                      'bg-zinc-100 text-black border-white shadow': selectedMesaId() === mesa.id,
-                      'bg-[#111111] text-zinc-300 border-zinc-800 hover:border-zinc-600': selectedMesaId() !== mesa.id && mesa.estado !== 'mantenimiento',
-                      'bg-[#111111] text-zinc-600 border-zinc-900 opacity-45 cursor-not-allowed': mesa.estado === 'mantenimiento'
+                      'bg-main text-app border-main shadow': selectedMesaId() === mesa.id,
+                      'bg-input text-main border-line hover:border-muted': selectedMesaId() !== mesa.id && mesa.estado !== 'mantenimiento',
+                      'bg-input text-muted border-line opacity-45 cursor-not-allowed': mesa.estado === 'mantenimiento'
                     }">
                     <span 
                       class="w-2 h-2 rounded-full"
                       [ngClass]="{
-                        'bg-emerald-400': mesa.estado === 'disponible',
-                        'bg-amber-400': mesa.estado === 'ocupada',
-                        'bg-sky-400': mesa.estado === 'reservada',
-                        'bg-zinc-500': mesa.estado === 'mantenimiento'
+                        'bg-emerald-500': mesa.estado === 'disponible',
+                        'bg-amber-500': mesa.estado === 'ocupada',
+                        'bg-sky-500': mesa.estado === 'reservada',
+                        'bg-muted': mesa.estado === 'mantenimiento'
                       }">
                     </span>
                     <span>{{ getMesaLabel(mesa) }}</span>
@@ -446,25 +454,25 @@
       <!-- Lista de Items en la Comanda -->
       <div class="flex-1 overflow-y-auto p-3 space-y-2">
         @if (cart().length === 0) {
-          <div class="h-full flex flex-col items-center justify-center text-center text-zinc-500 px-4">
+          <div class="h-full flex flex-col items-center justify-center text-center text-muted px-4">
             <span class="text-2xl mb-1">🧾</span>
-            <p class="text-xs font-semibold text-zinc-400">
+            <p class="text-xs font-semibold text-main">
               {{ appendTargetOrder() ? 'Agrega los platillos de la nueva ronda' : 'La comanda está vacía' }}
             </p>
             <p class="text-[11px] mt-0.5">Selecciona los platillos del menú para comenzar.</p>
           </div>
         } @else {
           @for (item of cart(); track item.product.id) {
-            <div class="bg-[#181818] border border-zinc-800/90 rounded-xl p-2.5 space-y-2">
+            <div class="bg-card border border-line rounded-xl p-2.5 space-y-2 shadow-2xs">
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
-                  <div class="font-bold text-xs text-white truncate">{{ item.product.nombre }}</div>
-                  <div class="font-mono text-[11px] text-zinc-400">
+                  <div class="font-bold text-xs text-main truncate">{{ item.product.nombre }}</div>
+                  <div class="font-mono text-[11px] text-muted">
                     {{ item.product.precio | currency:'MXN':'symbol-narrow':'1.2-2' }} c/u
                   </div>
                 </div>
 
-                <div class="font-mono font-bold text-xs text-emerald-400 shrink-0">
+                <div class="font-mono font-bold text-xs text-emerald-500 shrink-0">
                   {{ (+item.product.precio * item.cantidad) | currency:'MXN':'symbol-narrow':'1.2-2' }}
                 </div>
               </div>
@@ -476,22 +484,22 @@
                   [ngModel]="item.notas"
                   (ngModelChange)="updateItemNotes(item.product.id, $event)"
                   placeholder="Nota (ej. sin cebollín)..."
-                  class="flex-1 h-7 bg-[#111111] border border-zinc-800 rounded-lg px-2 text-[11px] text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-600" />
+                  class="flex-1 h-7 bg-input border border-line rounded-lg px-2 text-[11px] text-main placeholder-muted focus:outline-none focus:border-brand" />
 
                 <div class="flex items-center gap-1.5 shrink-0">
                   <button 
                     type="button"
                     (click)="decrementItem(item)"
-                    class="w-7 h-7 bg-[#222222] hover:bg-zinc-700 active:scale-95 rounded-lg text-white font-bold text-sm flex items-center justify-center border border-zinc-700">
+                    class="w-7 h-7 bg-hover hover:opacity-80 active:scale-95 rounded-lg text-main font-bold text-sm flex items-center justify-center border border-line">
                     −
                   </button>
-                  <span class="w-6 text-center font-mono font-bold text-xs text-white">
+                  <span class="w-6 text-center font-mono font-bold text-xs text-main">
                     {{ item.cantidad }}
                   </span>
                   <button 
                     type="button"
                     (click)="incrementItem(item)"
-                    class="w-7 h-7 bg-[#222222] hover:bg-zinc-700 active:scale-95 rounded-lg text-white font-bold text-sm flex items-center justify-center border border-zinc-700">
+                    class="w-7 h-7 bg-hover hover:opacity-80 active:scale-95 rounded-lg text-main font-bold text-sm flex items-center justify-center border border-line">
                     +
                   </button>
                 </div>
@@ -502,21 +510,21 @@
       </div>
 
       <!-- Footer Notas Generales, Total y Botón de Envío -->
-      <div class="p-3 bg-[#181818] border-t border-zinc-800 space-y-2 shrink-0">
+      <div class="p-3 bg-card border-t border-line space-y-2 shrink-0">
         @if (cart().length > 0) {
           <input 
             type="text"
             [ngModel]="ordenNotas()"
             (ngModelChange)="ordenNotas.set($event)"
             placeholder="Nota general de la orden (opcional)..."
-            class="w-full h-8 bg-[#111111] border border-zinc-800 rounded-lg px-2.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-600" />
+            class="w-full h-8 bg-input border border-line rounded-lg px-2.5 text-xs text-main placeholder-muted focus:outline-none focus:border-brand" />
         }
 
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-zinc-400 uppercase">
+          <span class="text-xs font-semibold text-muted uppercase">
             {{ appendTargetOrder() ? 'Subtotal Ronda' : 'Total' }}
           </span>
-          <span class="font-mono font-black text-lg text-white">
+          <span class="font-mono font-black text-lg text-main">
             {{ totalComanda() | currency:'MXN':'symbol-narrow':'1.2-2' }}
           </span>
         </div>
@@ -526,7 +534,7 @@
           [disabled]="cart().length === 0 || isSubmitting()"
           (click)="submitOrden()"
           class="w-full h-11 active:scale-[0.99] disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
-          [ngClass]="appendTargetOrder() ? 'bg-sky-600 hover:bg-sky-500' : 'bg-[#ab2424] hover:bg-[#961e1e]'">
+          [ngClass]="appendTargetOrder() ? 'bg-sky-600 hover:bg-sky-500' : 'bg-brand hover:bg-brand-hover'">
           @if (isSubmitting()) {
             <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
             <span>Enviando a Cocina...</span>
@@ -544,26 +552,26 @@
 
   <!-- ==================== MODAL ÓRDENES ACTIVAS / CUENTAS ABIERTAS ==================== -->
   @if (isOrdersModalOpen()) {
-    <div (click)="isOrdersModalOpen.set(false)" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div (click)="$event.stopPropagation()" class="bg-[#181818] border border-zinc-800 rounded-2xl max-w-2xl w-full p-5 shadow-2xl my-auto max-h-[85vh] flex flex-col">
+    <div (click)="isOrdersModalOpen.set(false)" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+      <div (click)="$event.stopPropagation()" class="bg-card border border-line rounded-2xl max-w-2xl w-full p-5 shadow-2xl my-auto max-h-[85vh] flex flex-col">
         
-        <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-3 shrink-0">
+        <div class="flex items-center justify-between border-b border-line pb-3 mb-3 shrink-0">
           <div>
-            <h2 class="text-base font-bold text-white">Cuentas Abiertas ({{ ordenesActivas().length }})</h2>
-            <p class="text-[11px] text-zinc-400">Agrega rondas, imprime precuentas, cancela o cobra cuentas listas</p>
+            <h2 class="text-base font-bold text-main">Cuentas Abiertas ({{ ordenesActivas().length }})</h2>
+            <p class="text-[11px] text-muted">Agrega rondas, imprime precuentas, cancela o cobra cuentas listas</p>
           </div>
-          <button type="button" (click)="isOrdersModalOpen.set(false)" class="text-zinc-400 hover:text-white text-xl font-bold px-2">&times;</button>
+          <button type="button" (click)="isOrdersModalOpen.set(false)" class="text-muted hover:text-main text-xl font-bold px-2">&times;</button>
         </div>
 
         <!-- Filtros por Estado de Cocina -->
-        <div class="flex flex-wrap items-center gap-1.5 pb-3 mb-3 border-b border-zinc-800/80 shrink-0">
+        <div class="flex flex-wrap items-center gap-1.5 pb-3 mb-3 border-b border-line shrink-0">
           <button 
             type="button"
             (click)="ordersFilter.set('todas')"
             class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-all"
             [ngClass]="ordersFilter() === 'todas' 
-              ? 'bg-white text-black border-white' 
-              : 'bg-[#111111] text-zinc-400 border-zinc-800 hover:text-white'">
+              ? 'bg-main text-app border-main' 
+              : 'bg-input text-muted border-line hover:text-main'">
             Todas ({{ ordenesActivas().length }})
           </button>
 
@@ -572,8 +580,8 @@
             (click)="ordersFilter.set('sin_iniciar')"
             class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-all"
             [ngClass]="ordersFilter() === 'sin_iniciar' 
-              ? 'bg-zinc-200 text-black border-white' 
-              : 'bg-[#111111] text-zinc-300 border-zinc-800 hover:text-white'">
+              ? 'bg-main text-app border-main' 
+              : 'bg-input text-main border-line hover:opacity-80'">
             ⏳ Sin iniciar ({{ ordenesSinIniciar().length }})
           </button>
 
@@ -582,8 +590,8 @@
             (click)="ordersFilter.set('en_preparacion')"
             class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-all"
             [ngClass]="ordersFilter() === 'en_preparacion' 
-              ? 'bg-amber-500 text-black border-amber-400' 
-              : 'bg-[#111111] text-amber-400 border-zinc-800 hover:text-amber-300'">
+              ? 'bg-amber-500 text-black border-amber-500' 
+              : 'bg-input text-amber-500 border-line hover:opacity-80'">
             🔥 En preparación ({{ ordenesEnPreparacion().length }})
           </button>
 
@@ -592,83 +600,83 @@
             (click)="ordersFilter.set('listo')"
             class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-all"
             [ngClass]="ordersFilter() === 'listo' 
-              ? 'bg-emerald-500 text-black border-emerald-400' 
-              : 'bg-[#111111] text-emerald-400 border-zinc-800 hover:text-emerald-300'">
+              ? 'bg-emerald-500 text-black border-emerald-500' 
+              : 'bg-input text-emerald-500 border-line hover:opacity-80'">
             ✅ Listos ({{ ordenesListas().length }})
           </button>
         </div>
 
         <div class="flex-1 overflow-y-auto space-y-3 pr-1">
           @if (filteredOrdenesActivas().length === 0) {
-            <div class="py-12 text-center text-zinc-500 text-xs">
+            <div class="py-12 text-center text-muted text-xs">
               No hay cuentas en esta categoría en este momento.
             </div>
           } @else {
             @for (ord of filteredOrdenesActivas(); track ord.id) {
               <div 
-                class="bg-[#111111] border rounded-xl p-3.5 space-y-2.5 transition-all"
+                class="bg-input border rounded-xl p-3.5 space-y-2.5 transition-all"
                 [ngClass]="{
-                  'border-emerald-500/50 shadow-lg shadow-emerald-950/20': getEstadoCocinaNormalizado(ord) === 'listo',
+                  'border-emerald-500/50 shadow-sm': getEstadoCocinaNormalizado(ord) === 'listo',
                   'border-amber-500/40': getEstadoCocinaNormalizado(ord) === 'en_preparacion',
-                  'border-zinc-800': getEstadoCocinaNormalizado(ord) === 'sin_iniciar'
+                  'border-line': getEstadoCocinaNormalizado(ord) === 'sin_iniciar'
                 }">
                 
                 <div class="flex items-center justify-between gap-2">
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="font-mono font-bold text-xs text-red-400">{{ formatFolio(ord) }}</span>
-                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-zinc-800 text-zinc-200">
+                    <span class="font-mono font-bold text-xs text-brand">{{ formatFolio(ord) }}</span>
+                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-hover text-main border border-line">
                       {{ ord.mesa ? getMesaLabel(ord.mesa) : ord.tipoOrden }}
                     </span>
                     <span 
                       class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border"
                       [ngClass]="{
-                        'bg-emerald-950/80 text-emerald-300 border-emerald-500/40': getEstadoCocinaNormalizado(ord) === 'listo',
-                        'bg-amber-950/80 text-amber-300 border-amber-500/40': getEstadoCocinaNormalizado(ord) === 'en_preparacion',
-                        'bg-zinc-900 text-zinc-300 border-zinc-700': getEstadoCocinaNormalizado(ord) === 'sin_iniciar'
+                        'bg-emerald-500/15 text-emerald-500 border-emerald-500/40': getEstadoCocinaNormalizado(ord) === 'listo',
+                        'bg-amber-500/15 text-amber-500 border-amber-500/40': getEstadoCocinaNormalizado(ord) === 'en_preparacion',
+                        'bg-card text-muted border-line': getEstadoCocinaNormalizado(ord) === 'sin_iniciar'
                       }">
                       {{ getEstadoOrdenLabel(ord) }}
                     </span>
                     @if (getOrdenElapsedTimer(ord)) {
-                      <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-zinc-900 text-zinc-300 border border-zinc-700">
+                      <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-card text-muted border border-line">
                         ⏱ {{ getOrdenElapsedTimer(ord) }}
                       </span>
                     }
                   </div>
-                  <span class="font-mono font-bold text-sm text-emerald-400 shrink-0">
+                  <span class="font-mono font-bold text-sm text-emerald-500 shrink-0">
                     {{ ord.total | currency:'MXN':'symbol-narrow':'1.2-2' }}
                   </span>
                 </div>
 
-                <div class="text-xs text-zinc-300 space-y-1 border-t border-zinc-800/80 pt-2">
+                <div class="text-xs text-muted space-y-1 border-t border-line pt-2">
                   @for (det of ord.detalles; track $index) {
                     <div class="flex justify-between items-center">
-                      <span><strong class="text-white">{{ det.cantidad }}x</strong> {{ det.producto.nombre }}</span>
-                      <span class="font-mono text-zinc-400">{{ det.subtotal | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
+                      <span><strong class="text-main">{{ det.cantidad }}x</strong> {{ det.producto.nombre }}</span>
+                      <span class="font-mono text-muted">{{ det.subtotal | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
                     </div>
                   }
                 </div>
 
                 @if (ord.notas) {
-                  <div class="text-[11px] text-amber-300/90 bg-amber-950/30 border border-amber-500/20 rounded-lg px-2.5 py-1.5">
+                  <div class="text-[11px] text-amber-500 bg-amber-500/15 border border-amber-500/30 rounded-lg px-2.5 py-1.5">
                     📝 {{ ord.notas }}
                   </div>
                 }
 
                 <!-- Acciones: Cancelar, + Ronda, Precuenta y Cobro -->
-                <div class="pt-2 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
+                <div class="pt-2 border-t border-line flex flex-wrap items-center justify-between gap-2">
                   <div class="flex items-center gap-1.5">
                     <button 
                       type="button"
                       (click)="openCancelOrderModal(ord)"
                       title="Cancelar orden y devolver inventario"
-                      class="px-2.5 py-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 text-xs font-semibold rounded-lg border border-red-800/40 transition-all">
+                      class="px-2.5 py-1.5 bg-brand/15 hover:bg-brand/25 text-brand text-xs font-semibold rounded-lg border border-brand/40 transition-all">
                       🗑️ Cancelar
                     </button>
 
                     <button 
                       type="button"
                       (click)="startAppendToOrder(ord)"
-                      class="px-2.5 py-1.5 bg-sky-950/60 hover:bg-sky-900/70 text-sky-300 text-xs font-bold rounded-lg border border-sky-500/40 transition-all">
+                      class="px-2.5 py-1.5 bg-sky-500/15 hover:bg-sky-500/25 text-sky-500 text-xs font-bold rounded-lg border border-sky-500/40 transition-all">
                       ➕ Ronda
                     </button>
                   </div>
@@ -677,7 +685,7 @@
                     <button 
                       type="button"
                       (click)="reimprimirTicket(ord.id, 'precuenta')"
-                      class="px-3 py-1.5 bg-[#181818] hover:bg-zinc-800 text-zinc-300 text-xs font-semibold rounded-lg border border-zinc-700 transition-all">
+                      class="px-3 py-1.5 bg-card hover:bg-hover text-main text-xs font-semibold rounded-lg border border-line transition-all">
                       🧾 Precuenta
                     </button>
 
@@ -689,7 +697,7 @@
                       class="px-4 py-1.5 text-xs font-bold rounded-lg transition-all"
                       [ngClass]="isOrdenListaParaCobrar(ord) 
                         ? 'bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white shadow cursor-pointer' 
-                        : 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed opacity-60'">
+                        : 'bg-hover text-muted border border-line cursor-not-allowed opacity-60'">
                       @if (getEstadoCocinaNormalizado(ord) === 'listo') {
                         💳 Cobrar Cuenta
                       } @else if (getEstadoCocinaNormalizado(ord) === 'en_preparacion') {
@@ -711,24 +719,24 @@
 
   <!-- ==================== MODAL CANCELAR ORDEN ==================== -->
   @if (cancelTargetOrder(); as ord) {
-    <div (click)="closeCancelOrderModal()" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
-      <div (click)="$event.stopPropagation()" class="bg-[#181818] border border-zinc-800 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
-        <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+    <div (click)="closeCancelOrderModal()" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+      <div (click)="$event.stopPropagation()" class="bg-card border border-line rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-line pb-3">
           <div>
-            <h2 class="text-base font-bold text-red-400">Cancelar Orden {{ formatFolio(ord) }}</h2>
-            <p class="text-[11px] text-zinc-400">
+            <h2 class="text-base font-bold text-brand">Cancelar Orden {{ formatFolio(ord) }}</h2>
+            <p class="text-[11px] text-muted">
               {{ ord.mesa ? getMesaLabel(ord.mesa) : 'Para Llevar' }} · Total {{ ord.total | currency:'MXN':'symbol-narrow':'1.2-2' }}
             </p>
           </div>
-          <button type="button" (click)="closeCancelOrderModal()" class="text-zinc-400 hover:text-white text-xl font-bold">&times;</button>
+          <button type="button" (click)="closeCancelOrderModal()" class="text-muted hover:text-main text-xl font-bold">&times;</button>
         </div>
 
-        <div class="bg-amber-950/35 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200 leading-relaxed">
+        <div class="bg-amber-500/15 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-500 leading-relaxed">
           Al cancelar esta orden se retirará de cocina, se <strong>reintegrarán los insumos al inventario</strong> y se liberará la mesa si no tiene otras cuentas activas.
         </div>
 
         <div class="space-y-2">
-          <label class="block text-xs font-semibold text-zinc-300">Motivo de cancelación</label>
+          <label class="block text-xs font-semibold text-main">Motivo de cancelación</label>
           <div class="flex flex-wrap gap-1.5">
             @for (opcion of ['Error de captura', 'Cliente canceló pedido', 'Tiempo de espera', 'Insumo agotado']; track opcion) {
               <button 
@@ -736,8 +744,8 @@
                 (click)="cancelMotivo.set(opcion)"
                 class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all"
                 [ngClass]="cancelMotivo() === opcion 
-                  ? 'bg-red-600 text-white border-red-500' 
-                  : 'bg-[#111111] text-zinc-300 border-zinc-800 hover:border-zinc-600'">
+                  ? 'bg-brand text-white border-brand' 
+                  : 'bg-input text-main border-line hover:border-muted'">
                 {{ opcion }}
               </button>
             }
@@ -748,21 +756,21 @@
             [ngModel]="cancelMotivo()"
             (ngModelChange)="cancelMotivo.set($event)"
             placeholder="Escribe o detalla el motivo..."
-            class="w-full h-10 bg-[#111111] border border-zinc-700 rounded-xl px-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500" />
+            class="w-full h-10 bg-input border border-line rounded-xl px-3 text-xs text-main placeholder-muted focus:outline-none focus:border-brand" />
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800">
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-line">
           <button 
             type="button"
             (click)="closeCancelOrderModal()"
-            class="px-4 h-10 bg-[#222222] text-zinc-300 text-xs font-semibold rounded-xl">
+            class="px-4 h-10 bg-hover text-main border border-line text-xs font-semibold rounded-xl">
             Volver
           </button>
           <button 
             type="button"
             [disabled]="!cancelMotivo().trim() || isCancelingOrder()"
             (click)="confirmarCancelacionOrden()"
-            class="px-5 h-10 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow transition-all">
+            class="px-5 h-10 bg-brand hover:bg-brand-hover disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow transition-all">
             {{ isCancelingOrder() ? 'Cancelando...' : 'Confirmar Cancelación' }}
           </button>
         </div>
@@ -772,46 +780,46 @@
 
   <!-- ==================== MODAL COBRO / CAJA POS ==================== -->
   @if (checkoutOrder(); as ord) {
-    <div (click)="closeCheckoutModal()" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div (click)="$event.stopPropagation()" class="bg-[#181818] border border-zinc-800 rounded-2xl max-w-lg w-full p-5 shadow-2xl my-auto max-h-[90vh] flex flex-col">
+    <div (click)="closeCheckoutModal()" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+      <div (click)="$event.stopPropagation()" class="bg-card border border-line rounded-2xl max-w-lg w-full p-5 shadow-2xl my-auto max-h-[90vh] flex flex-col">
         
         <!-- Header Modal Cobro -->
-        <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4 shrink-0">
+        <div class="flex items-center justify-between border-b border-line pb-3 mb-4 shrink-0">
           <div>
-            <h2 class="text-base font-bold text-white">
+            <h2 class="text-base font-bold text-main">
               {{ paymentReceipt() ? 'Comprobante de Pago' : 'Cobrar Orden' }}
             </h2>
-            <p class="text-[11px] text-zinc-400">
+            <p class="text-[11px] text-muted">
               Folio {{ formatFolio(ord) }} · {{ ord.mesa ? getMesaLabel(ord.mesa) : 'Para Llevar' }}
             </p>
           </div>
-          <button type="button" (click)="closeCheckoutModal()" class="text-zinc-400 hover:text-white text-xl font-bold px-2">&times;</button>
+          <button type="button" (click)="closeCheckoutModal()" class="text-muted hover:text-main text-xl font-bold px-2">&times;</button>
         </div>
 
         <!-- VISTA POST-PAGO (COMPROBANTE Y CAMBIO) -->
         @if (paymentReceipt(); as receipt) {
           <div class="space-y-4 overflow-y-auto pr-1">
-            <div class="bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-4 text-center space-y-1">
+            <div class="bg-emerald-500/15 border border-emerald-500/40 rounded-2xl p-4 text-center space-y-1">
               <div class="text-2xl">✅</div>
-              <div class="text-sm font-bold text-emerald-300">{{ receipt.message }}</div>
-              <div class="text-xs text-zinc-400">Folio #{{ receipt.folio }}</div>
+              <div class="text-sm font-bold text-emerald-500">{{ receipt.message }}</div>
+              <div class="text-xs text-muted">Folio #{{ receipt.folio }}</div>
             </div>
 
-            <div class="bg-[#111111] border border-zinc-800 rounded-xl p-4 space-y-2 text-xs">
-              <div class="flex justify-between text-zinc-400">
+            <div class="bg-input border border-line rounded-xl p-4 space-y-2 text-xs">
+              <div class="flex justify-between text-muted">
                 <span>Total de la Orden:</span>
-                <span class="font-mono font-bold text-white">{{ receipt.totalOrden | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
+                <span class="font-mono font-bold text-main">{{ receipt.totalOrden | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
               </div>
-              <div class="flex justify-between text-zinc-400">
+              <div class="flex justify-between text-muted">
                 <span>Monto Abonado:</span>
-                <span class="font-mono font-bold text-emerald-400">{{ receipt.montoAbonado | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
+                <span class="font-mono font-bold text-emerald-500">{{ receipt.montoAbonado | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
               </div>
-              <div class="flex justify-between text-sm font-bold border-t border-zinc-800 pt-2">
-                <span class="text-zinc-200">Cambio a Devolver:</span>
-                <span class="font-mono text-amber-400 text-base">{{ receipt.cambio | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
+              <div class="flex justify-between text-sm font-bold border-t border-line pt-2">
+                <span class="text-main">Cambio a Devolver:</span>
+                <span class="font-mono text-amber-500 text-base">{{ receipt.cambio | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
               </div>
               @if (receipt.puntosAcumulados > 0) {
-                <div class="flex justify-between text-sky-400 border-t border-zinc-800/80 pt-2">
+                <div class="flex justify-between text-sky-500 border-t border-line pt-2">
                   <span>Puntos de Lealtad Otorgados:</span>
                   <span class="font-mono font-bold">+{{ receipt.puntosAcumulados }} pts</span>
                 </div>
@@ -823,14 +831,14 @@
                 <button 
                   type="button"
                   (click)="reimprimirTicket(lastPaidOrderId()!, 'ticket_final')"
-                  class="flex-1 h-10 bg-[#222222] hover:bg-zinc-700 text-zinc-200 text-xs font-bold rounded-xl border border-zinc-700 transition-all">
+                  class="flex-1 h-10 bg-hover hover:opacity-80 text-main text-xs font-bold rounded-xl border border-line transition-all">
                   🖨️ Imprimir Ticket Final
                 </button>
               }
               <button 
                 type="button"
                 (click)="closeCheckoutModal()"
-                class="flex-1 h-10 bg-[#ab2424] hover:bg-[#961e1e] text-white text-xs font-bold rounded-xl transition-all">
+                class="flex-1 h-10 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-xl transition-all">
                 Listo / Cerrar
               </button>
             </div>
@@ -840,12 +848,12 @@
           <div class="flex-1 overflow-y-auto space-y-4 pr-1">
             
             <!-- Resumen Total -->
-            <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3.5 flex items-center justify-between">
+            <div class="bg-input border border-line rounded-xl p-3.5 flex items-center justify-between">
               <div>
-                <div class="text-[11px] uppercase text-zinc-400 font-semibold">Total a Pagar</div>
-                <div class="text-[11px] text-zinc-500">{{ ord.detalles.length }} conceptos en la orden</div>
+                <div class="text-[11px] uppercase text-muted font-semibold">Total a Pagar</div>
+                <div class="text-[11px] text-muted">{{ ord.detalles.length }} conceptos en la orden</div>
               </div>
-              <div class="font-mono font-black text-2xl text-emerald-400">
+              <div class="font-mono font-black text-2xl text-emerald-500">
                 {{ totalCheckout() | currency:'MXN':'symbol-narrow':'1.2-2' }}
               </div>
             </div>
@@ -853,13 +861,13 @@
             <!-- Botones rápidos de efectivo -->
             @if (pagosDraft().length === 1 && pagosDraft()[0].metodoPago === 'efectivo') {
               <div class="flex flex-wrap items-center gap-1.5">
-                <span class="text-[11px] text-zinc-400 mr-1">Efectivo rápido:</span>
-                <button type="button" (click)="setMontoRapido(totalCheckout())" class="px-2.5 py-1 bg-[#222222] hover:bg-zinc-700 rounded-lg text-[11px] font-mono font-bold text-emerald-400 border border-zinc-700">
+                <span class="text-[11px] text-muted mr-1">Efectivo rápido:</span>
+                <button type="button" (click)="setMontoRapido(totalCheckout())" class="px-2.5 py-1 bg-hover hover:opacity-80 rounded-lg text-[11px] font-mono font-bold text-emerald-500 border border-line">
                   Exacto
                 </button>
                 @for (billete of [100, 200, 500, 1000]; track billete) {
                   @if (billete >= totalCheckout()) {
-                    <button type="button" (click)="setMontoRapido(billete)" class="px-2.5 py-1 bg-[#222222] hover:bg-zinc-700 rounded-lg text-[11px] font-mono font-bold text-zinc-200 border border-zinc-700">
+                    <button type="button" (click)="setMontoRapido(billete)" class="px-2.5 py-1 bg-hover hover:opacity-80 rounded-lg text-[11px] font-mono font-bold text-main border border-line">
                       ${{ billete }}
                     </button>
                   }
@@ -870,43 +878,43 @@
             <!-- Líneas de Método de Pago -->
             <div class="space-y-2.5">
               <div class="flex items-center justify-between">
-                <label class="text-[11px] font-bold uppercase text-zinc-400">Formas de Pago</label>
+                <label class="text-[11px] font-bold uppercase text-muted">Formas de Pago</label>
                 <button 
                   type="button"
                   (click)="addPagoLine()"
-                  class="text-xs text-red-400 hover:text-red-300 font-bold">
+                  class="text-xs text-brand hover:opacity-80 font-bold">
                   + Dividir / Pago Mixto
                 </button>
               </div>
 
               @for (pago of pagosDraft(); track $index) {
-                <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3 space-y-2">
+                <div class="bg-input border border-line rounded-xl p-3 space-y-2">
                   <div class="flex items-center gap-2">
                     <select 
                       [ngModel]="pago.metodoPago"
                       (ngModelChange)="updatePagoMetodo($index, $event)"
-                      class="h-9 bg-[#181818] border border-zinc-700 rounded-lg px-2.5 text-xs font-bold text-white focus:outline-none focus:border-red-500">
+                      class="h-9 bg-card border border-line rounded-lg px-2.5 text-xs font-bold text-main focus:outline-none focus:border-brand">
                       <option value="efectivo">💵 Efectivo</option>
                       <option value="tarjeta">💳 Tarjeta</option>
                       <option value="transferencia">📲 Transferencia</option>
                     </select>
 
                     <div class="relative flex-1">
-                      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-mono text-xs">$</span>
+                      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted font-mono text-xs">$</span>
                       <input 
                         type="number"
                         step="0.01"
                         min="0"
                         [ngModel]="pago.monto"
                         (ngModelChange)="updatePagoMonto($index, $event)"
-                        class="w-full h-9 bg-[#181818] border border-zinc-700 rounded-lg pl-6 pr-3 text-white font-mono font-bold text-sm focus:outline-none focus:border-red-500" />
+                        class="w-full h-9 bg-card border border-line rounded-lg pl-6 pr-3 text-main font-mono font-bold text-sm focus:outline-none focus:border-brand" />
                     </div>
 
                     @if (pagosDraft().length > 1) {
                       <button 
                         type="button"
                         (click)="removePagoLine($index)"
-                        class="w-9 h-9 bg-red-950/50 hover:bg-red-900/70 text-red-400 rounded-lg font-bold text-sm border border-red-800/40">
+                        class="w-9 h-9 bg-brand/15 hover:bg-brand/25 text-brand rounded-lg font-bold text-sm border border-brand/40">
                         &times;
                       </button>
                     }
@@ -918,26 +926,26 @@
                       [ngModel]="pago.idTransaccion"
                       (ngModelChange)="updatePagoTransaccion($index, $event)"
                       placeholder="Referencia / Autorización terminal (opcional)..."
-                      class="w-full h-8 bg-[#181818] border border-zinc-800 rounded-lg px-2.5 text-[11px] text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-600" />
+                      class="w-full h-8 bg-card border border-line rounded-lg px-2.5 text-[11px] text-main placeholder-muted focus:outline-none focus:border-brand" />
                   }
                 </div>
               }
             </div>
 
             <!-- Desglose Abonado / Restante / Cambio -->
-            <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3 space-y-1.5 text-xs">
-              <div class="flex justify-between text-zinc-400">
+            <div class="bg-input border border-line rounded-xl p-3 space-y-1.5 text-xs">
+              <div class="flex justify-between text-muted">
                 <span>Total Abonado:</span>
-                <span class="font-mono font-bold text-white">{{ totalAbonadoCheckout() | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
+                <span class="font-mono font-bold text-main">{{ totalAbonadoCheckout() | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
               </div>
 
               @if (restanteCheckout() > 0) {
-                <div class="flex justify-between text-amber-400 font-bold">
+                <div class="flex justify-between text-amber-500 font-bold">
                   <span>Restante por Cubrir:</span>
                   <span class="font-mono">{{ restanteCheckout() | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
                 </div>
               } @else {
-                <div class="flex justify-between text-emerald-400 font-bold text-sm border-t border-zinc-800 pt-1.5">
+                <div class="flex justify-between text-emerald-500 font-bold text-sm border-t border-line pt-1.5">
                   <span>Cambio a Entregar:</span>
                   <span class="font-mono">{{ cambioCheckout() | currency:'MXN':'symbol-narrow':'1.2-2' }}</span>
                 </div>
@@ -947,11 +955,11 @@
           </div>
 
           <!-- Footer Botón Confirmar Pago -->
-          <div class="pt-4 mt-4 border-t border-zinc-800 flex items-center gap-2 shrink-0">
+          <div class="pt-4 mt-4 border-t border-line flex items-center gap-2 shrink-0">
             <button 
               type="button"
               (click)="closeCheckoutModal()"
-              class="px-4 h-11 bg-[#222222] text-zinc-300 text-xs font-semibold rounded-xl">
+              class="px-4 h-11 bg-hover text-main border border-line text-xs font-semibold rounded-xl">
               Cancelar
             </button>
             <button 
@@ -970,30 +978,30 @@
 
   <!-- ==================== MODAL HISTORIAL DE CORTES DEL MESERO ==================== -->
   @if (isHistorialModalOpen()) {
-    <div (click)="cerrarHistorial()" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div (click)="$event.stopPropagation()" class="bg-[#181818] border border-zinc-800 rounded-2xl max-w-2xl w-full p-5 shadow-2xl my-auto max-h-[85vh] flex flex-col">
+    <div (click)="cerrarHistorial()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+      <div (click)="$event.stopPropagation()" class="bg-card border border-line rounded-2xl max-w-2xl w-full p-5 shadow-2xl my-auto max-h-[85vh] flex flex-col">
         
-        <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-3 shrink-0">
+        <div class="flex items-center justify-between border-b border-line pb-3 mb-3 shrink-0">
           <div>
-            <h2 class="text-base font-bold text-white">Mi Historial de Cortes</h2>
-            <p class="text-[11px] text-zinc-400">Consulta tus turnos cerrados y el efectivo esperado</p>
+            <h2 class="text-base font-bold text-main">Mi Historial de Cortes</h2>
+            <p class="text-[11px] text-muted">Consulta tus turnos cerrados y el efectivo esperado</p>
           </div>
-          <button type="button" (click)="cerrarHistorial()" class="text-zinc-400 hover:text-white text-xl font-bold px-2">&times;</button>
+          <button type="button" (click)="cerrarHistorial()" class="text-muted hover:text-main text-xl font-bold px-2">&times;</button>
         </div>
 
         @if (isLoadingHistorial()) {
-          <div class="py-12 flex flex-col items-center justify-center text-zinc-400 text-sm gap-2">
-            <span class="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></span>
+          <div class="py-12 flex flex-col items-center justify-center text-muted text-sm gap-2">
+            <span class="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin"></span>
             <span>Cargando historial de cortes...</span>
           </div>
         } @else if (historialMesero().length === 0) {
-          <div class="py-12 text-center text-xs text-zinc-500">
+          <div class="py-12 text-center text-xs text-muted">
             Aún no tienes cortes de caja cerrados registrados.
           </div>
         } @else {
           <div class="flex-1 overflow-y-auto pr-1">
             <table class="w-full text-left text-xs">
-              <thead class="text-zinc-400 border-b border-zinc-800 sticky top-0 bg-[#181818]">
+              <thead class="text-muted border-b border-line sticky top-0 bg-card">
                 <tr>
                   <th class="pb-2">Cierre</th>
                   <th class="pb-2 text-right">Ventas Totales</th>
@@ -1002,16 +1010,16 @@
                   <th class="pb-2 text-right">Diferencia</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-zinc-800/70">
+              <tbody class="divide-y divide-line">
                 @for (c of historialMesero(); track c.id) {
                   <tr>
-                    <td class="py-2.5 text-zinc-400">{{ c.cerradoEn | date:'dd/MM/yyyy HH:mm' }}</td>
-                    <td class="py-2.5 text-right font-mono font-bold text-white">{{ c.totalRecaudadoVentas | currency:'MXN':'symbol-narrow':'1.2-2' }}</td>
-                    <td class="py-2.5 text-right font-mono text-emerald-400">{{ c.efectivoEnGavetaEsperado | currency:'MXN':'symbol-narrow':'1.2-2' }}</td>
-                    <td class="py-2.5 text-right font-mono text-white">{{ c.efectivoContado | currency:'MXN':'symbol-narrow':'1.2-2' }}</td>
+                    <td class="py-2.5 text-muted">{{ c.cerradoEn | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td class="py-2.5 text-right font-mono font-bold text-main">{{ c.totalRecaudadoVentas | currency:'MXN':'symbol-narrow':'1.2-2' }}</td>
+                    <td class="py-2.5 text-right font-mono text-emerald-500">{{ c.efectivoEnGavetaEsperado | currency:'MXN':'symbol-narrow':'1.2-2' }}</td>
+                    <td class="py-2.5 text-right font-mono text-main">{{ c.efectivoContado | currency:'MXN':'symbol-narrow':'1.2-2' }}</td>
                     <td 
                       class="py-2.5 text-right font-mono font-bold"
-                      [ngClass]="c.diferencia === 0 ? 'text-emerald-400' : c.diferencia > 0 ? 'text-sky-400' : 'text-red-400'">
+                      [ngClass]="c.diferencia === 0 ? 'text-emerald-500' : c.diferencia > 0 ? 'text-sky-500' : 'text-brand'">
                       {{ c.diferencia > 0 ? '+' : '' }}{{ c.diferencia | currency:'MXN':'symbol-narrow':'1.2-2' }}
                     </td>
                   </tr>

@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy, signal } from '@angular/core';
+import { Injectable, OnDestroy, signal, inject, NgZone } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
 
@@ -28,6 +28,8 @@ export interface PosOrdenActualizadaEvent {
   providedIn: 'root',
 })
 export class RealtimeService implements OnDestroy {
+  // Inyectamos NgZone para asegurarnos de que Angular reaccione
+  private zone = inject(NgZone);
   private socket: Socket;
   private audioCtx: AudioContext | null = null;
 
@@ -37,6 +39,7 @@ export class RealtimeService implements OnDestroy {
   private nuevaComanda$ = new Subject<NuevaComandaEvent>();
   private ordenCancelada$ = new Subject<OrdenCanceladaEvent>();
   private posOrdenActualizada$ = new Subject<PosOrdenActualizadaEvent>();
+  private cajaSubject = new Subject<any>();
 
   constructor() {
     this.socket = io('http://localhost:3000', {
@@ -45,23 +48,28 @@ export class RealtimeService implements OnDestroy {
     });
 
     this.socket.on('connect', () => {
-      this.isConnected.set(true);
+      this.zone.run(() => this.isConnected.set(true));
     });
 
     this.socket.on('disconnect', () => {
-      this.isConnected.set(false);
+      this.zone.run(() => this.isConnected.set(false));
     });
 
+    // 🛠️ Forzamos a Angular a detectar el cambio con zone.run
     this.socket.on('cocina:nueva-comanda', (data: NuevaComandaEvent) => {
-      this.nuevaComanda$.next(data);
+      this.zone.run(() => this.nuevaComanda$.next(data));
     });
 
     this.socket.on('cocina:orden-cancelada', (data: OrdenCanceladaEvent) => {
-      this.ordenCancelada$.next(data);
+      this.zone.run(() => this.ordenCancelada$.next(data));
     });
 
     this.socket.on('pos:orden-actualizada', (data: PosOrdenActualizadaEvent) => {
-      this.posOrdenActualizada$.next(data);
+      this.zone.run(() => this.posOrdenActualizada$.next(data));
+    });
+
+    this.socket.on('caja:actualizada', (data: any) => {
+      this.zone.run(() => this.cajaSubject.next(data));
     });
   }
 
@@ -76,12 +84,9 @@ export class RealtimeService implements OnDestroy {
   onPosOrdenActualizada(): Observable<PosOrdenActualizadaEvent> {
     return this.posOrdenActualizada$.asObservable();
   }
+
   onCajaActualizada(): Observable<any> {
-    return new Observable((observer) => {
-      const handler = (payload: any) => observer.next(payload);
-      this.socket.on('caja:actualizada', handler);
-      return () => this.socket.off('caja:actualizada', handler);
-    });
+    return this.cajaSubject.asObservable();
   }
 
   toggleSound(): void {
@@ -91,18 +96,16 @@ export class RealtimeService implements OnDestroy {
     }
   }
 
-  // Timbre doble para Cocina cuando entra una comanda o ronda nueva
   playKitchenAlert(): void {
     if (!this.soundEnabled()) return;
-    this.playTone(587.33, 0, 0.14, 'triangle');   // Re5
-    this.playTone(880.0, 0.16, 0.25, 'triangle'); // La5
+    this.playTone(587.33, 0, 0.14, 'triangle');
+    this.playTone(880.0, 0.16, 0.25, 'triangle');
   }
 
-  // Campana de servicio para POS cuando un platillo o pedido completo está listo
   playBellChime(): void {
     if (!this.soundEnabled()) return;
-    this.playTone(1046.5, 0, 0.35, 'sine');       // Do6
-    this.playTone(1318.5, 0.12, 0.45, 'sine');    // Mi6
+    this.playTone(1046.5, 0, 0.35, 'sine');
+    this.playTone(1318.5, 0.12, 0.45, 'sine');
   }
 
   private playTone(
@@ -140,7 +143,7 @@ export class RealtimeService implements OnDestroy {
       oscillator.start(now);
       oscillator.stop(now + durationSec + 0.02);
     } catch {
-      // El navegador requiere una interacción previa del usuario antes de reproducir audio
+      // Ignorar bloqueo de audio
     }
   }
 

@@ -1,8 +1,8 @@
-<div class="p-4 sm:p-6 bg-[#0d0d0d] min-h-screen text-white font-sans select-none">
+<div class="p-4 sm:p-6 bg-app min-h-screen text-main font-sans select-none">
 
   <!-- Navegación Superior -->
   <div class="mb-4">
-    <a routerLink="/admin" class="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors">
+    <a routerLink="/admin" class="inline-flex items-center gap-1.5 text-xs text-muted hover:text-main transition-colors">
       ← Volver al Panel Admin
     </a>
   </div>
@@ -11,20 +11,20 @@
   <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
     <div>
       <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Menú, Categorías y Productos</h1>
-      <p class="text-xs sm:text-sm text-zinc-400">Configura el catálogo de platillos, bebidas y precios del POS</p>
+      <p class="text-xs sm:text-sm text-muted">Configura el catálogo de platillos, bebidas y precios del POS</p>
     </div>
 
     <div class="flex items-center gap-2.5">
       @if (activeTab() === 'productos') {
         <button 
           (click)="openCreateProductModal()"
-          class="bg-[#ab2424] hover:bg-[#961e1e] active:scale-95 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2">
+          class="bg-brand hover:bg-brand-hover active:scale-95 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2">
           <span>+ Nuevo Producto</span>
         </button>
       } @else {
         <button 
           (click)="openCreateCategoryModal()"
-          class="bg-[#ab2424] hover:bg-[#961e1e] active:scale-95 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2">
+          class="bg-brand hover:bg-brand-hover active:scale-95 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2">
           <span>+ Nueva Categoría</span>
         </button>
       }
@@ -33,41 +33,41 @@
 
   <!-- Alertas -->
   @if (successMessage()) {
-    <div class="mb-4 bg-emerald-950/80 border border-emerald-600/50 text-emerald-200 px-4 py-2.5 rounded-xl text-xs sm:text-sm flex justify-between items-center">
+    <div class="mb-4 bg-emerald-500/15 border border-emerald-500/40 text-emerald-500 px-4 py-2.5 rounded-xl text-xs sm:text-sm flex justify-between items-center font-semibold">
       <span>{{ successMessage() }}</span>
-      <button (click)="successMessage.set('')" class="text-emerald-400 font-bold text-base">&times;</button>
+      <button (click)="successMessage.set('')" class="font-bold text-base">&times;</button>
     </div>
   }
 
   @if (errorMessage() && !isCatModalOpen() && !isProdModalOpen() && !isRecipeModalOpen()) {
-    <div class="mb-4 bg-red-950/80 border border-red-600/50 text-red-200 px-4 py-2.5 rounded-xl text-xs sm:text-sm flex justify-between items-center">
+    <div class="mb-4 bg-brand/15 border border-brand/40 text-brand px-4 py-2.5 rounded-xl text-xs sm:text-sm flex justify-between items-center font-semibold">
       <span>{{ errorMessage() }}</span>
-      <button (click)="errorMessage.set('')" class="text-red-400 font-bold text-base">&times;</button>
+      <button (click)="errorMessage.set('')" class="font-bold text-base">&times;</button>
     </div>
   }
 
   <!-- Pestañas (Tabs) -->
-  <div class="flex items-center gap-2 border-b border-zinc-800 pb-3 mb-5">
+  <div class="flex items-center gap-2 border-b border-line pb-3 mb-5">
     <button 
       type="button"
       (click)="activeTab.set('productos')"
-      class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all"
-      [ngClass]="activeTab() === 'productos' ? 'bg-[#ab2424] text-white shadow' : 'bg-[#181818] text-zinc-400 hover:text-white border border-zinc-800'">
+      class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all border"
+      [ngClass]="activeTab() === 'productos' ? 'bg-brand text-white border-brand shadow-xs' : 'bg-card text-muted hover:text-main border-line'">
       🍣 Productos ({{ productos().length }})
     </button>
 
     <button 
       type="button"
       (click)="activeTab.set('categorias')"
-      class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all"
-      [ngClass]="activeTab() === 'categorias' ? 'bg-[#ab2424] text-white shadow' : 'bg-[#181818] text-zinc-400 hover:text-white border border-zinc-800'">
+      class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all border"
+      [ngClass]="activeTab() === 'categorias' ? 'bg-brand text-white border-brand shadow-xs' : 'bg-card text-muted hover:text-main border-line'">
       🗂️ Categorías ({{ categorias().length }})
     </button>
   </div>
 
   @if (isLoading()) {
-    <div class="bg-[#181818] border border-zinc-800 rounded-2xl p-12 text-center text-zinc-400 text-sm flex flex-col items-center gap-2">
-      <span class="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></span>
+    <div class="bg-card border border-line rounded-2xl p-12 text-center text-muted text-sm flex flex-col items-center gap-2">
+      <span class="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin"></span>
       <span>Cargando catálogo...</span>
     </div>
   } @else {
@@ -81,7 +81,7 @@
           type="button"
           (click)="selectedCategoryFilter.set(null)"
           class="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border"
-          [ngClass]="selectedCategoryFilter() === null ? 'bg-zinc-200 text-black border-white' : 'bg-[#181818] text-zinc-400 border-zinc-800 hover:text-white'">
+          [ngClass]="selectedCategoryFilter() === null ? 'bg-main text-app border-main' : 'bg-card text-muted border-line hover:text-main'">
           Todos ({{ productos().length }})
         </button>
 
@@ -90,23 +90,23 @@
             type="button"
             (click)="selectedCategoryFilter.set(cat.id)"
             class="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border"
-            [ngClass]="selectedCategoryFilter() === cat.id ? 'bg-zinc-200 text-black border-white' : 'bg-[#181818] text-zinc-400 border-zinc-800 hover:text-white'">
+            [ngClass]="selectedCategoryFilter() === cat.id ? 'bg-main text-app border-main' : 'bg-card text-muted border-line hover:text-main'">
             {{ cat.nombre }}
           </button>
         }
       </div>
 
       <!-- Tabla de Productos -->
-      <div class="bg-[#181818] border border-zinc-800/80 rounded-2xl shadow-xl overflow-hidden">
+      <div class="bg-card border border-line rounded-2xl shadow-sm overflow-hidden">
         @if (filteredProductos().length === 0) {
-          <div class="p-12 text-center text-zinc-500 text-sm">
+          <div class="p-12 text-center text-muted text-sm">
             No hay productos registrados en esta vista.
           </div>
         } @else {
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse text-xs sm:text-sm">
               <thead>
-                <tr class="bg-[#111111] border-b border-zinc-800 text-zinc-400 uppercase text-[10px] sm:text-xs tracking-wider">
+                <tr class="bg-input border-b border-line text-muted uppercase text-[10px] sm:text-xs tracking-wider">
                   <th class="py-3.5 px-4 font-semibold">Producto</th>
                   <th class="py-3.5 px-4 font-semibold">Categoría</th>
                   <th class="py-3.5 px-4 font-semibold">Precio</th>
@@ -114,53 +114,53 @@
                   <th class="py-3.5 px-4 font-semibold text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-zinc-800/60">
+              <tbody class="divide-y divide-line">
                 @for (prod of filteredProductos(); track prod.id) {
-                  <tr class="hover:bg-[#1c1c1c]/50 transition-colors">
+                  <tr class="hover:bg-hover/50 transition-colors">
                     
                     <!-- Celda clicable para ver receta -->
                     <td class="py-3 px-4">
                       <div (click)="openRecipeModal(prod)" class="flex items-center gap-3 cursor-pointer group">
                         @if (prod.urlImagen) {
-                          <img [src]="prod.urlImagen" [alt]="prod.nombre" class="w-10 h-10 rounded-xl object-cover bg-zinc-900 border border-zinc-800 shrink-0" />
+                          <img [src]="prod.urlImagen" [alt]="prod.nombre" class="w-10 h-10 rounded-xl object-cover bg-input border border-line shrink-0" />
                         } @else {
-                          <div class="w-10 h-10 rounded-xl bg-[#222222] border border-zinc-800 flex items-center justify-center text-lg shrink-0">
+                          <div class="w-10 h-10 rounded-xl bg-hover border border-line flex items-center justify-center text-lg shrink-0">
                             🍣
                           </div>
                         }
                         <div>
-                          <div class="font-bold text-white group-hover:text-red-400 transition-colors flex items-center gap-1.5">
+                          <div class="font-bold text-main group-hover:text-brand transition-colors flex items-center gap-1.5">
                             <span>{{ prod.nombre }}</span>
-                            <span class="text-[10px] font-normal text-zinc-500 group-hover:text-zinc-300">(ver receta)</span>
+                            <span class="text-[10px] font-normal text-muted group-hover:text-main">(ver receta)</span>
                           </div>
                           @if (prod.descripcion) {
-                            <div class="text-[11px] text-zinc-500 line-clamp-1 max-w-xs">{{ prod.descripcion }}</div>
+                            <div class="text-[11px] text-muted line-clamp-1 max-w-xs">{{ prod.descripcion }}</div>
                           }
                         </div>
                       </div>
                     </td>
 
                     <td class="py-3 px-4">
-                      <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700">
+                      <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-hover text-main border border-line">
                         {{ prod.categoria.nombre }}
                       </span>
                     </td>
 
-                    <td class="py-3 px-4 font-mono font-bold text-emerald-400">
+                    <td class="py-3 px-4 font-mono font-bold text-emerald-500">
                       {{ prod.precio | currency:'MXN':'symbol-narrow':'1.2-2' }}
                     </td>
 
                     <td class="py-3 px-4">
                       @if (!prod.estaDisponible) {
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-950/60 text-red-400 border border-red-500/30">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand/15 text-brand border border-brand/30">
                           Deshabilitado manualmente
                         </span>
                       } @else if (prod.disponibleParaVenta === false) {
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/70 text-amber-300 border border-amber-500/40">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-500 border border-amber-500/40">
                           ⚠️ Agotado (Sin insumos)
                         </span>
                       } @else {
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-500/30">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
                           Disponible
                           @if (prod.porcionesDisponibles !== null && prod.porcionesDisponibles !== undefined) {
                             ({{ prod.porcionesDisponibles }} porc.)
@@ -174,20 +174,20 @@
                         <button 
                           (click)="openRecipeModal(prod)"
                           title="Ver Receta / Insumos"
-                          class="px-2.5 py-2 bg-[#222222] hover:bg-zinc-700 active:scale-95 text-zinc-200 text-xs font-semibold rounded-lg border border-zinc-700 transition-all flex items-center gap-1">
+                          class="px-2.5 py-2 bg-hover hover:opacity-80 active:scale-95 text-main text-xs font-semibold rounded-lg border border-line transition-all flex items-center gap-1">
                           <span>📋</span>
                           <span class="hidden md:inline">Receta</span>
                         </button>
                         <button 
                           (click)="openEditProductModal(prod)"
                           title="Editar Producto"
-                          class="p-2 bg-[#222222] hover:bg-zinc-700 active:scale-95 text-zinc-300 rounded-lg border border-zinc-700 transition-all">
+                          class="p-2 bg-hover hover:opacity-80 active:scale-95 text-main rounded-lg border border-line transition-all">
                           ✏️
                         </button>
                         <button 
                           (click)="deleteProduct(prod)"
                           title="Eliminar Producto"
-                          class="p-2 bg-[#222222] hover:bg-red-950/80 active:scale-95 text-red-400 rounded-lg border border-zinc-700 hover:border-red-800/60 transition-all">
+                          class="p-2 bg-hover hover:bg-brand/15 active:scale-95 text-brand rounded-lg border border-line hover:border-brand/40 transition-all">
                           🗑️
                         </button>
                       </div>
@@ -204,16 +204,16 @@
 
     <!-- ==================== TAB 2: CATEGORÍAS ==================== -->
     @if (activeTab() === 'categorias') {
-      <div class="bg-[#181818] border border-zinc-800/80 rounded-2xl shadow-xl overflow-hidden">
+      <div class="bg-card border border-line rounded-2xl shadow-sm overflow-hidden">
         @if (categorias().length === 0) {
-          <div class="p-12 text-center text-zinc-500 text-sm">
+          <div class="p-12 text-center text-muted text-sm">
             No hay categorías creadas aún.
           </div>
         } @else {
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse text-xs sm:text-sm">
               <thead>
-                <tr class="bg-[#111111] border-b border-zinc-800 text-zinc-400 uppercase text-[10px] sm:text-xs tracking-wider">
+                <tr class="bg-input border-b border-line text-muted uppercase text-[10px] sm:text-xs tracking-wider">
                   <th class="py-3.5 px-4 font-semibold">Nombre</th>
                   <th class="py-3.5 px-4 font-semibold">Slug</th>
                   <th class="py-3.5 px-4 font-semibold">Productos</th>
@@ -221,29 +221,29 @@
                   <th class="py-3.5 px-4 font-semibold text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-zinc-800/60">
+              <tbody class="divide-y divide-line">
                 @for (cat of categorias(); track cat.id) {
-                  <tr class="hover:bg-[#1c1c1c]/50 transition-colors">
+                  <tr class="hover:bg-hover/50 transition-colors">
                     
                     <td class="py-3 px-4">
-                      <div class="font-bold text-white">{{ cat.nombre }}</div>
+                      <div class="font-bold text-main">{{ cat.nombre }}</div>
                       @if (cat.descripcion) {
-                        <div class="text-[11px] text-zinc-500">{{ cat.descripcion }}</div>
+                        <div class="text-[11px] text-muted">{{ cat.descripcion }}</div>
                       }
                     </td>
 
-                    <td class="py-3 px-4 font-mono text-xs text-zinc-400">
+                    <td class="py-3 px-4 font-mono text-xs text-muted">
                       /{{ cat.slug }}
                     </td>
 
-                    <td class="py-3 px-4 font-mono text-zinc-300">
+                    <td class="py-3 px-4 font-mono text-main">
                       {{ cat._count?.productos ?? 0 }} ítems
                     </td>
 
                     <td class="py-3 px-4">
                       <span 
                         class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
-                        [ngClass]="cat.estaActiva ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'">
+                        [ngClass]="cat.estaActiva ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30' : 'bg-hover text-muted border border-line'">
                         {{ cat.estaActiva ? 'Activa' : 'Inactiva' }}
                       </span>
                     </td>
@@ -252,12 +252,12 @@
                       <div class="flex items-center justify-end gap-2">
                         <button 
                           (click)="openEditCategoryModal(cat)"
-                          class="p-2 bg-[#222222] hover:bg-zinc-700 active:scale-95 text-zinc-300 rounded-lg border border-zinc-700 transition-all">
+                          class="p-2 bg-hover hover:opacity-80 active:scale-95 text-main rounded-lg border border-line transition-all">
                           ✏️
                         </button>
                         <button 
                           (click)="deleteCategory(cat)"
-                          class="p-2 bg-[#222222] hover:bg-red-950/80 active:scale-95 text-red-400 rounded-lg border border-zinc-700 hover:border-red-800/60 transition-all">
+                          class="p-2 bg-hover hover:bg-brand/15 active:scale-95 text-brand rounded-lg border border-line hover:border-brand/40 transition-all">
                           🗑️
                         </button>
                       </div>
@@ -275,26 +275,26 @@
 
   <!-- ==================== MODAL VER RECETA DEL PRODUCTO ==================== -->
   @if (isRecipeModalOpen()) {
-    <div (click)="closeRecipeModal()" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div (click)="$event.stopPropagation()" class="bg-[#181818] border border-zinc-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl my-auto">
+    <div (click)="closeRecipeModal()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+      <div (click)="$event.stopPropagation()" class="bg-card border border-line rounded-2xl max-w-xl w-full p-6 shadow-2xl my-auto">
         
-        <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
+        <div class="flex items-center justify-between border-b border-line pb-3 mb-4">
           <div>
-            <span class="text-[10px] uppercase tracking-wider text-red-400 font-bold">Ficha Técnica / Receta (BOM)</span>
-            <h2 class="text-base sm:text-lg font-bold text-white">
+            <span class="text-[10px] uppercase tracking-wider text-brand font-bold">Ficha Técnica / Receta (BOM)</span>
+            <h2 class="text-base sm:text-lg font-bold text-main">
               {{ selectedRecipeData()?.nombreProducto || 'Cargando...' }}
             </h2>
           </div>
-          <button (click)="closeRecipeModal()" class="text-zinc-400 hover:text-white text-xl font-bold px-2">&times;</button>
+          <button (click)="closeRecipeModal()" class="text-muted hover:text-main text-xl font-bold px-2">&times;</button>
         </div>
 
         @if (isLoadingRecipe()) {
-          <div class="py-10 text-center text-zinc-400 text-xs flex flex-col items-center gap-2">
-            <span class="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></span>
+          <div class="py-10 text-center text-muted text-xs flex flex-col items-center gap-2">
+            <span class="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin"></span>
             <span>Consultando ingredientes y stock...</span>
           </div>
         } @else if (errorMessage()) {
-          <div class="bg-red-950/80 border border-red-600/50 text-red-200 px-3 py-2.5 rounded-xl text-xs">
+          <div class="bg-brand/15 border border-brand/40 text-brand px-3 py-2.5 rounded-xl text-xs font-semibold">
             {{ errorMessage() }}
           </div>
         } @else {
@@ -302,25 +302,25 @@
 
             <!-- Resumen Económico -->
             <div class="grid grid-cols-3 gap-2.5 mb-4">
-              <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3">
-                <div class="text-[10px] text-zinc-400 uppercase">Precio Venta</div>
-                <div class="font-mono font-bold text-white text-sm mt-0.5">
+              <div class="bg-input border border-line rounded-xl p-3">
+                <div class="text-[10px] text-muted uppercase">Precio Venta</div>
+                <div class="font-mono font-bold text-main text-sm mt-0.5">
                   {{ data.precioVenta | currency:'MXN':'symbol-narrow':'1.2-2' }}
                 </div>
               </div>
 
-              <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3">
-                <div class="text-[10px] text-zinc-400 uppercase">Costo Insumos</div>
-                <div class="font-mono font-bold text-amber-400 text-sm mt-0.5">
+              <div class="bg-input border border-line rounded-xl p-3">
+                <div class="text-[10px] text-muted uppercase">Costo Insumos</div>
+                <div class="font-mono font-bold text-amber-500 text-sm mt-0.5">
                   {{ data.costoProduccion | currency:'MXN':'symbol-narrow':'1.2-2' }}
                 </div>
               </div>
 
-              <div class="bg-[#111111] border border-zinc-800 rounded-xl p-3">
-                <div class="text-[10px] text-zinc-400 uppercase">Margen Bruto</div>
+              <div class="bg-input border border-line rounded-xl p-3">
+                <div class="text-[10px] text-muted uppercase">Margen Bruto</div>
                 <div 
                   class="font-mono font-bold text-sm mt-0.5"
-                  [ngClass]="data.margenEstimado >= 0 ? 'text-emerald-400' : 'text-red-400'">
+                  [ngClass]="data.margenEstimado >= 0 ? 'text-emerald-500' : 'text-brand'">
                   {{ data.margenEstimado | currency:'MXN':'symbol-narrow':'1.2-2' }}
                 </div>
               </div>
@@ -328,47 +328,47 @@
 
             <!-- Lista de Ingredientes de la Receta -->
             @if (data.receta.length === 0) {
-              <div class="py-8 px-4 text-center border border-dashed border-zinc-800 rounded-xl space-y-3">
-                <p class="text-xs text-zinc-400">Este producto aún no tiene ingredientes asignados en su receta.</p>
+              <div class="py-8 px-4 text-center border border-dashed border-line rounded-xl space-y-3">
+                <p class="text-xs text-muted">Este producto aún no tiene ingredientes asignados en su receta.</p>
                 <a 
                   routerLink="/admin/inventory" 
                   (click)="closeRecipeModal()"
-                  class="inline-block px-4 py-2 bg-[#222222] hover:bg-zinc-700 text-white text-xs font-semibold rounded-xl border border-zinc-700 transition-all">
+                  class="inline-block px-4 py-2 bg-hover hover:opacity-80 text-main text-xs font-semibold rounded-xl border border-line transition-all">
                   Configurar en Inventario y Recetas →
                 </a>
               </div>
             } @else {
-              <div class="overflow-x-auto border border-zinc-800 rounded-xl">
+              <div class="overflow-x-auto border border-line rounded-xl">
                 <table class="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr class="bg-[#111111] border-b border-zinc-800 text-zinc-400 uppercase text-[10px]">
+                    <tr class="bg-input border-b border-line text-muted uppercase text-[10px]">
                       <th class="py-2.5 px-3">Ingrediente</th>
                       <th class="py-2.5 px-3">Requiere</th>
                       <th class="py-2.5 px-3">En Stock</th>
                       <th class="py-2.5 px-3 text-right">Estado</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-zinc-800/60">
+                  <tbody class="divide-y divide-line">
                     @for (item of data.receta; track item.ingredienteId) {
-                      <tr class="hover:bg-[#1e1e1e]">
-                        <td class="py-2.5 px-3 font-bold text-white">
+                      <tr class="hover:bg-hover/50">
+                        <td class="py-2.5 px-3 font-bold text-main">
                           {{ item.ingrediente.nombre }}
                         </td>
-                        <td class="py-2.5 px-3 font-mono text-zinc-200">
-                          {{ item.cantidadRequerida }} <span class="text-zinc-500 font-sans">{{ item.ingrediente.unidadMedida }}</span>
+                        <td class="py-2.5 px-3 font-mono text-main">
+                          {{ item.cantidadRequerida }} <span class="text-muted font-sans">{{ item.ingrediente.unidadMedida }}</span>
                         </td>
                         <td 
                           class="py-2.5 px-3 font-mono font-semibold"
-                          [ngClass]="hasEnoughStock(item.ingrediente.stockActual, item.cantidadRequerida) ? 'text-zinc-300' : 'text-amber-400'">
-                          {{ item.ingrediente.stockActual }} <span class="text-zinc-500 font-sans">{{ item.ingrediente.unidadMedida }}</span>
+                          [ngClass]="hasEnoughStock(item.ingrediente.stockActual, item.cantidadRequerida) ? 'text-main' : 'text-amber-500'">
+                          {{ item.ingrediente.stockActual }} <span class="text-muted font-sans">{{ item.ingrediente.unidadMedida }}</span>
                         </td>
                         <td class="py-2.5 px-3 text-right">
                           @if (hasEnoughStock(item.ingrediente.stockActual, item.cantidadRequerida)) {
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-500/30">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
                               OK
                             </span>
                           } @else {
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/80 text-amber-300 border border-amber-500/40">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-500 border border-amber-500/40">
                               Insuficiente
                             </span>
                           }
@@ -380,18 +380,18 @@
               </div>
             }
 
-            <div class="flex items-center justify-between pt-4 mt-4 border-t border-zinc-800">
+            <div class="flex items-center justify-between pt-4 mt-4 border-t border-line">
               <a 
                 routerLink="/admin/inventory" 
                 (click)="closeRecipeModal()"
-                class="text-xs text-zinc-400 hover:text-white transition-colors">
+                class="text-xs text-muted hover:text-main transition-colors">
                 ✏️ Editar receta en Inventario
               </a>
 
               <button 
                 type="button" 
                 (click)="closeRecipeModal()" 
-                class="px-4 py-2 bg-[#222222] hover:bg-zinc-700 text-white text-xs font-semibold rounded-xl transition-all">
+                class="px-4 py-2 bg-hover hover:opacity-80 text-main border border-line text-xs font-semibold rounded-xl transition-all">
                 Cerrar
               </button>
             </div>
@@ -405,41 +405,41 @@
 
   <!-- ==================== MODAL CATEGORÍA ==================== -->
   @if (isCatModalOpen()) {
-    <div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div class="bg-[#181818] border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-        <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
+    <div class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+      <div class="bg-card border border-line rounded-2xl max-w-md w-full p-6 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-line pb-3 mb-4">
           <h2 class="text-base font-bold">
             {{ editingCategory() ? 'Editar Categoría' : 'Nueva Categoría' }}
           </h2>
-          <button (click)="closeCategoryModal()" class="text-zinc-400 hover:text-white text-xl font-bold">&times;</button>
+          <button (click)="closeCategoryModal()" class="text-muted hover:text-main text-xl font-bold">&times;</button>
         </div>
 
         @if (errorMessage()) {
-          <div class="mb-3 bg-red-950/80 border border-red-600/50 text-red-200 px-3 py-2 rounded-xl text-xs">
+          <div class="mb-3 bg-brand/15 border border-brand/40 text-brand px-3 py-2 rounded-xl text-xs font-semibold">
             {{ errorMessage() }}
           </div>
         }
 
         <form (submit)="$event.preventDefault(); saveCategory()" class="space-y-3">
           <div>
-            <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Nombre (Máx. 50 caracteres)</label>
+            <label class="block text-[11px] font-semibold text-muted uppercase mb-1">Nombre (Máx. 50 caracteres)</label>
             <input 
               type="text" 
               maxlength="50"
               [(ngModel)]="catForm.nombre" 
               name="catNombre"
               placeholder="Ej. Rollos Empanizados"
-              class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white text-xs sm:text-sm focus:outline-none focus:border-red-500" />
+              class="w-full h-10 bg-input border border-line rounded-xl px-3 text-main text-xs sm:text-sm focus:outline-none focus:border-brand" />
           </div>
 
           <div>
-            <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Descripción (Opcional)</label>
+            <label class="block text-[11px] font-semibold text-muted uppercase mb-1">Descripción (Opcional)</label>
             <textarea 
               rows="2"
               [(ngModel)]="catForm.descripcion" 
               name="catDescripcion"
               placeholder="Breve descripción de la categoría..."
-              class="w-full bg-[#111111] border border-zinc-800 rounded-xl p-3 text-white text-xs sm:text-sm focus:outline-none focus:border-red-500"></textarea>
+              class="w-full bg-input border border-line rounded-xl p-3 text-main text-xs sm:text-sm focus:outline-none focus:border-brand"></textarea>
           </div>
 
           @if (editingCategory()) {
@@ -449,16 +449,16 @@
                 id="catActiva" 
                 [(ngModel)]="catForm.estaActiva" 
                 name="catActiva"
-                class="w-4 h-4 accent-red-600 rounded bg-[#111111] border-zinc-800" />
-              <label for="catActiva" class="text-xs text-zinc-300">Categoría activa en el menú</label>
+                class="w-4 h-4 accent-brand rounded bg-input border-line" />
+              <label for="catActiva" class="text-xs text-main">Categoría activa en el menú</label>
             </div>
           }
 
-          <div class="flex justify-end gap-2 pt-4 border-t border-zinc-800">
-            <button type="button" (click)="closeCategoryModal()" class="px-4 py-2 bg-[#222222] text-zinc-300 text-xs font-semibold rounded-xl">
+          <div class="flex justify-end gap-2 pt-4 border-t border-line">
+            <button type="button" (click)="closeCategoryModal()" class="px-4 py-2 bg-hover text-main border border-line text-xs font-semibold rounded-xl">
               Cancelar
             </button>
-            <button type="submit" [disabled]="isSaving()" class="px-5 py-2 bg-[#ab2424] hover:bg-[#961e1e] text-white text-xs font-bold rounded-xl">
+            <button type="submit" [disabled]="isSaving()" class="px-5 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-xl">
               {{ isSaving() ? 'Guardando...' : 'Guardar' }}
             </button>
           </div>
@@ -469,17 +469,17 @@
 
   <!-- ==================== MODAL PRODUCTO ==================== -->
   @if (isProdModalOpen()) {
-    <div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div class="bg-[#181818] border border-zinc-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl my-auto">
-        <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
+    <div class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+      <div class="bg-card border border-line rounded-2xl max-w-lg w-full p-6 shadow-2xl my-auto">
+        <div class="flex items-center justify-between border-b border-line pb-3 mb-4">
           <h2 class="text-base font-bold">
             {{ editingProduct() ? 'Editar Producto' : 'Nuevo Producto' }}
           </h2>
-          <button (click)="closeProductModal()" class="text-zinc-400 hover:text-white text-xl font-bold">&times;</button>
+          <button (click)="closeProductModal()" class="text-muted hover:text-main text-xl font-bold">&times;</button>
         </div>
 
         @if (errorMessage()) {
-          <div class="mb-3 bg-red-950/80 border border-red-600/50 text-red-200 px-3 py-2 rounded-xl text-xs">
+          <div class="mb-3 bg-brand/15 border border-brand/40 text-brand px-3 py-2 rounded-xl text-xs font-semibold">
             {{ errorMessage() }}
           </div>
         }
@@ -487,22 +487,22 @@
         <form (submit)="$event.preventDefault(); saveProduct()" class="space-y-3">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Nombre del Producto</label>
+              <label class="block text-[11px] font-semibold text-muted uppercase mb-1">Nombre del Producto</label>
               <input 
                 type="text" 
                 maxlength="100"
                 [(ngModel)]="prodForm.nombre" 
                 name="prodNombre"
                 placeholder="Ej. Dragon Roll"
-                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white text-xs sm:text-sm focus:outline-none focus:border-red-500" />
+                class="w-full h-10 bg-input border border-line rounded-xl px-3 text-main text-xs sm:text-sm focus:outline-none focus:border-brand" />
             </div>
 
             <div>
-              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Categoría</label>
+              <label class="block text-[11px] font-semibold text-muted uppercase mb-1">Categoría</label>
               <select 
                 [(ngModel)]="prodForm.categoriaId" 
                 name="prodCategoria"
-                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white text-xs sm:text-sm focus:outline-none focus:border-red-500">
+                class="w-full h-10 bg-input border border-line rounded-xl px-3 text-main text-xs sm:text-sm focus:outline-none focus:border-brand">
                 @for (cat of categorias(); track cat.id) {
                   <option [ngValue]="cat.id">{{ cat.nombre }}</option>
                 }
@@ -513,7 +513,7 @@
           <!-- Fila de 3 columnas para Precio, Tiempo y URL -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Precio (MXN)</label>
+              <label class="block text-[11px] font-semibold text-muted uppercase mb-1">Precio (MXN)</label>
               <input 
                 type="number" 
                 step="0.01"
@@ -521,41 +521,41 @@
                 [(ngModel)]="prodForm.precio" 
                 name="prodPrecio"
                 placeholder="145.00"
-                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-red-500" />
+                class="w-full h-10 bg-input border border-line rounded-xl px-3 text-main font-mono text-xs sm:text-sm focus:outline-none focus:border-brand" />
             </div>
 
-            <!-- NUEVO CAMPO DE TIEMPO -->
+            <!-- CAMPO DE TIEMPO -->
             <div>
-              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Tiempo Prep. (Min)</label>
+              <label class="block text-[11px] font-semibold text-muted uppercase mb-1">Tiempo Prep. (Min)</label>
               <input 
                 type="number" 
                 min="1"
                 [(ngModel)]="prodForm.tiempoPreparacionMinutos" 
                 name="prodTiempo"
                 placeholder="15"
-                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-red-500" />
+                class="w-full h-10 bg-input border border-line rounded-xl px-3 text-main font-mono text-xs sm:text-sm focus:outline-none focus:border-brand" />
             </div>
 
             <div>
-              <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">URL de Imagen (Opcional)</label>
+              <label class="block text-[11px] font-semibold text-muted uppercase mb-1">URL de Imagen (Opcional)</label>
               <input 
                 type="text" 
                 maxlength="255"
                 [(ngModel)]="prodForm.urlImagen" 
                 name="prodImagen"
                 placeholder="https://..."
-                class="w-full h-10 bg-[#111111] border border-zinc-800 rounded-xl px-3 text-white text-xs sm:text-sm focus:outline-none focus:border-red-500" />
+                class="w-full h-10 bg-input border border-line rounded-xl px-3 text-main text-xs sm:text-sm focus:outline-none focus:border-brand" />
             </div>
           </div>
 
           <div>
-            <label class="block text-[11px] font-semibold text-zinc-300 uppercase mb-1">Descripción / Ingredientes</label>
+            <label class="block text-[11px] font-semibold text-muted uppercase mb-1">Descripción / Ingredientes</label>
             <textarea 
               rows="2"
               [(ngModel)]="prodForm.descripcion" 
               name="prodDescripcion"
               placeholder="Camarón empanizado, aguacate, queso crema y anguila..."
-              class="w-full bg-[#111111] border border-zinc-800 rounded-xl p-3 text-white text-xs sm:text-sm focus:outline-none focus:border-red-500"></textarea>
+              class="w-full bg-input border border-line rounded-xl p-3 text-main text-xs sm:text-sm focus:outline-none focus:border-brand"></textarea>
           </div>
 
           <div class="flex items-center gap-2 pt-1">
@@ -564,15 +564,15 @@
               id="prodDisponible" 
               [(ngModel)]="prodForm.estaDisponible" 
               name="prodDisponible"
-              class="w-4 h-4 accent-red-600 rounded bg-[#111111] border-zinc-800" />
-            <label for="prodDisponible" class="text-xs text-zinc-300">Disponible para ordenar en el POS</label>
+              class="w-4 h-4 accent-brand rounded bg-input border-line" />
+            <label for="prodDisponible" class="text-xs text-main">Disponible para ordenar en el POS</label>
           </div>
 
-          <div class="flex justify-end gap-2 pt-4 border-t border-zinc-800">
-            <button type="button" (click)="closeProductModal()" class="px-4 py-2 bg-[#222222] text-zinc-300 text-xs font-semibold rounded-xl">
+          <div class="flex justify-end gap-2 pt-4 border-t border-line">
+            <button type="button" (click)="closeProductModal()" class="px-4 py-2 bg-hover text-main border border-line text-xs font-semibold rounded-xl">
               Cancelar
             </button>
-            <button type="submit" [disabled]="isSaving()" class="px-5 py-2 bg-[#ab2424] hover:bg-[#961e1e] text-white text-xs font-bold rounded-xl">
+            <button type="submit" [disabled]="isSaving()" class="px-5 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-xl">
               {{ isSaving() ? 'Guardando...' : 'Guardar Producto' }}
             </button>
           </div>
